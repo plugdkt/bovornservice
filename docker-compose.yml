@@ -1,0 +1,54 @@
+# Bovorn Service — local development (V2 on PHP 8.2 + MariaDB)
+#   docker compose up -d --build
+#   V2:          http://localhost:8080/Bovorn/V2/
+#   phpMyAdmin:  http://localhost:8081/
+# The first start imports database/*.sql (takes about a minute). To re-import: docker compose down -v
+services:
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS:-root}
+      DB_USER: ${DB_USER:-bovornserv}
+      DB_PASS: ${DB_PASS:-bovorn_dev}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max-allowed-packet=64M
+    ports:
+      - "3307:3306" # 3307 so it does not clash with XAMPP's MySQL on 3306
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+      - ./database:/dumps:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  web:
+    build: ./docker/php
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_NAME: bovornserv_v2_db
+      DB_USER: ${DB_USER:-bovornserv}
+      DB_PASS: ${DB_PASS:-bovorn_dev}
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html/Bovorn
+    depends_on:
+      db:
+        condition: service_healthy
+
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+
+volumes:
+  db_data:

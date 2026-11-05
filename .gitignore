@@ -1,0 +1,14 @@
+# Only the V2 application and the Docker dev setup are tracked.
+# Everything else in this folder (legacy system, Backup/, database dumps with customer data) stays local.
+/*
+!/.gitignore
+!/README.md
+!/V2/
+!/docker-compose.yml
+!/docker/
+
+# Real database credentials — copy V2/config.example.php to V2/config.local.php
+V2/config.local.php
+
+# Needs helper functions that the current V2/db_connect.php does not have yet
+V2/recover_missing_payments.php
