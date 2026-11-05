@@ -12,3 +12,7 @@ V2/config.local.php
 
 # Needs helper functions that the current V2/db_connect.php does not have yet
 V2/recover_missing_payments.php
+
+# Database dumps contain customer data — never commit them (schema.sql is structure only)
+*.sql
+!V2/schema.sql

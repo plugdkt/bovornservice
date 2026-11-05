@@ -517,6 +517,10 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                            class="btn-print-tax">
                             🖨️ พิมพ์ใบส่งต่อภาษีรายวัน
                         </button>
+                        <button onclick="openAccountReportPopup('daily_closing.php?day=<?php echo $p_day; ?>&month=<?php echo $p_month; ?>&year=<?php echo $p_year; ?>')"
+                           class="btn-print-tax" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
+                            📒 สรุปส่งยอดรายวัน
+                        </button>
                     <?php endif; ?>
                 </div>
                 <span style="font-size:0.875rem; color:var(--text-muted);">
@@ -726,6 +730,10 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
 </div>
 
 <script>
+function openAccountReportPopup(url) {
+    window.open(url, 'account_report_popup', 'width=980,height=900,scrollbars=yes,resizable=yes');
+}
+
 function openTaxReferralPopup(url) {
     window.open(url, 'tax_referral_popup', 'width=980,height=850,scrollbars=yes,resizable=yes');
 }

@@ -3,6 +3,7 @@
 // Optimized Sales and Revenue Report Dashboard (Manager View) with Pagination, Popups & Quick Filters
 date_default_timezone_set('Asia/Bangkok');
 require("con_db.php");
+require("../daily_closing_lib.php");
 
 // Search Filters - Supports GET request to preserve pagination query parameters
 $search_active = isset($_GET['search_active']) ? intval($_GET['search_active']) : 0;
@@ -273,6 +274,20 @@ if ($day > 0 || $month > 0 || $year > 0) {
         
     } catch (\PDOException $e) {
         $db_error = "เกิดข้อผิดพลาดในการดึงข้อมูล: " . $e->getMessage();
+    }
+}
+
+// ── Daily closing summary per branch (สรุปส่งยอดรายวัน) — same figures as daily_closing.php ──
+$closing_boxes = [];
+if ($is_daily) {
+    $closing_year_ad = $p_year > 2500 ? $p_year - 543 : $p_year;
+    foreach ($branch_id > 0 ? [$branch_id] : [1, 2] as $cb_branch) {
+        try {
+            $closing_boxes[$cb_branch] = daily_closing_totals($pdo, $p_day, $p_month, $closing_year_ad, $cb_branch);
+        } catch (\PDOException $e) {
+            error_log("Daily closing summary error: " . $e->getMessage());
+            $closing_boxes[$cb_branch] = null;
+        }
     }
 }
 ?>
@@ -824,6 +839,51 @@ if ($day > 0 || $month > 0 || $year > 0) {
                         </div>
                     <?php endif; ?>
 
+                    <!-- ── DAILY CLOSING SUMMARY PER BRANCH (สรุปส่งยอดรายวัน) ── -->
+                    <?php if ($is_daily && !empty($closing_boxes)): ?>
+                        <div class="card" style="border: 1px solid #93c5fd; background-color: #eff6ff; margin-bottom: 1.5rem; padding: 1.25rem 1.5rem;">
+                            <div style="font-weight: 700; color: #1e3a8a; font-size: 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span>📒</span> สรุปส่งยอดรายวัน
+                                <span style="font-weight: 500; font-size: 0.8rem; color: #64748b;">(ยังไม่หักรายจ่ายอื่นๆ — กรอกได้ในรายงานเต็ม)</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                                <?php foreach ($closing_boxes as $cb_branch => $cb): ?>
+                                    <div style="background: #ffffff; border: 1px solid #bfdbfe; padding: 1rem; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
+                                        <div style="font-weight: 700; font-size: 0.85rem; color: #1d4ed8; margin-bottom: 0.75rem; border-bottom: 1px dashed #bfdbfe; padding-bottom: 0.25rem;">
+                                            🏢 สาขา<?php echo $cb_branch == 1 ? 'ดอกคำใต้' : 'ท่าวังทอง'; ?> <?php echo $cb ? '(' . number_format($cb['bills']) . ' บิล)' : ''; ?>
+                                        </div>
+                                        <?php if ($cb === null): ?>
+                                            <div style="font-size: 0.85rem; color: #b91c1c;">ดึงข้อมูลไม่สำเร็จ</div>
+                                        <?php else: ?>
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem; font-size: 0.85rem;">
+                                                <span>รายรับรวม</span><strong><?php echo number_format($cb['total']); ?> บาท</strong>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem; font-size: 0.85rem; color: var(--text-muted);">
+                                                <span>&nbsp;&nbsp;• ลูกค้าโอนเข้าบัญชี</span><span><?php echo number_format($cb['transfer']); ?> บาท</span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem; font-size: 0.85rem;">
+                                                <span>รับเงินสด</span><strong><?php echo number_format($cb['cash']); ?> บาท</strong>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem; font-size: 0.85rem; color: #b91c1c;">
+                                                <span>หัก รายจ่ายต่อภาษี</span><span>−<?php echo number_format($cb['tax_expense']); ?> บาท</span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid #e2e8f0; padding-top: 0.5rem; margin-top: 0.5rem; font-weight: 800; font-size: 1.05rem; color: <?php echo $cb['cash_to_account'] < 0 ? '#b91c1c' : '#1d4ed8'; ?>;">
+                                                <span><?php echo $cb['cash_to_account'] < 0 ? 'เงินสดไม่พอจ่าย' : 'เงินสดที่ต้องโอนเข้าบัญชี'; ?></span>
+                                                <span><?php echo number_format(abs($cb['cash_to_account'])); ?> บาท</span>
+                                            </div>
+                                            <div style="text-align: right; margin-top: 0.75rem;">
+                                                <button onclick="openAccountReportPopup('../daily_closing.php?day=<?php echo $p_day; ?>&month=<?php echo $p_month; ?>&year=<?php echo $p_year; ?>&id_branch=<?php echo $cb_branch; ?>')"
+                                                   class="btn-print-tax" style="padding: 0.35rem 0.95rem; font-size: 0.8rem; background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
+                                                    📒 เปิดรายงานเต็ม / พิมพ์
+                                                </button>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
                     <!-- SEARCH RESULTS TABLE -->
                     <div class="card">
                         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
@@ -1073,6 +1133,10 @@ if ($day > 0 || $month > 0 || $year > 0) {
     </div>
 
     <script>
+        function openAccountReportPopup(url) {
+            window.open(url, 'account_report_popup', 'width=980,height=900,scrollbars=yes,resizable=yes');
+        }
+
         function openTaxReferralPopup(url) {
             window.open(url, 'tax_referral_popup', 'width=980,height=850,scrollbars=yes,resizable=yes');
         }
