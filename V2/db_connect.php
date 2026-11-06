@@ -1,6 +1,7 @@
 ﻿<?php
 // db_connect.php
 // Database connection using PDO for Bovorn Service V2
+// Fully backwards-compatible with PHP 5.4+ through PHP 8.x
 
 // Security Headers
 if (!headers_sent()) {
@@ -13,9 +14,11 @@ if (!headers_sent()) {
 // Secure session configuration
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', '1');
-    ini_set('session.cookie_samesite', 'Lax');
+    @ini_set('session.cookie_samesite', 'Lax'); // PHP 7.3+, safely ignored on older PHP
     ini_set('session.use_strict_mode', '1');
 }
+
+// ── Polyfills for PHP 5.4 / 5.5 / 5.6 Compatibility ────────────────
 
 // Polyfill for password_hash and password_verify on PHP < 5.5
 if (!function_exists('password_hash')) {
@@ -66,6 +69,7 @@ if (!function_exists('password_verify')) {
     }
 }
 
+// Polyfill for array_column on PHP < 5.5
 if (!function_exists('array_column')) {
     function array_column(array $input, $columnKey, $indexKey = null) {
         $array = array();
@@ -86,6 +90,52 @@ if (!function_exists('array_column')) {
     }
 }
 
+// Polyfill for random_bytes on PHP < 7.0
+if (!function_exists('random_bytes')) {
+    function random_bytes($length) {
+        if (function_exists('openssl_random_pseudo_bytes')) {
+            $crypto_strong = false;
+            $bytes = openssl_random_pseudo_bytes($length, $crypto_strong);
+            if ($bytes !== false && $crypto_strong) {
+                return $bytes;
+            }
+        }
+        if (function_exists('mcrypt_create_iv')) {
+            $bytes = mcrypt_create_iv($length, MCRYPT_DEV_URANDOM);
+            if ($bytes !== false) {
+                return $bytes;
+            }
+        }
+        $bytes = '';
+        for ($i = 0; $i < $length; $i++) {
+            $bytes .= chr(mt_rand(0, 255));
+        }
+        return $bytes;
+    }
+}
+
+// Polyfill for hash_equals on PHP < 5.6
+if (!function_exists('hash_equals')) {
+    function hash_equals($known_string, $user_string) {
+        if (!is_string($known_string) || !is_string($user_string)) {
+            return false;
+        }
+        $len = strlen($known_string);
+        if ($len !== strlen($user_string)) {
+            return false;
+        }
+        $status = 0;
+        for ($i = 0; $i < $len; $i++) {
+            $status |= (ord($known_string[$i]) ^ ord($user_string[$i]));
+        }
+        return $status === 0;
+    }
+}
+
+if (!defined('LEGACY_UNKNOWN_LABEL')) {
+    define('LEGACY_UNKNOWN_LABEL', 'ไม่ระบุ (ข้อมูลเก่า)');
+}
+
 // Database credentials live in config.local.php (git-ignored); see config.example.php
 $config_file = __DIR__ . '/config.local.php';
 if (!is_file($config_file)) {
@@ -99,11 +149,11 @@ $pass = $config['pass'];
 $charset = "utf8mb4";
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
+$options = array(
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     PDO::ATTR_EMULATE_PREPARES   => false,
-];
+);
 
 try {
      $pdo = new PDO($dsn, $user, $pass, $options);
@@ -112,7 +162,7 @@ try {
 }
 
 // Function to assist with checking authentication session
-function check_login($allowed_roles = []) {
+function check_login($allowed_roles = array()) {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
@@ -149,7 +199,7 @@ function validate_csrf() {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
-    $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    $token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : (isset($_SERVER['HTTP_X_CSRF_TOKEN']) ? $_SERVER['HTTP_X_CSRF_TOKEN'] : '');
     if (empty($token) || !hash_equals(csrf_token(), $token)) {
         http_response_code(403);
         die("Invalid or missing CSRF token. Request blocked for security.");
@@ -177,7 +227,7 @@ function get_system_setting($key, $default = '') {
     global $pdo;
     try {
         $stmt = $pdo->prepare("SELECT `setting_value` FROM `system_settings` WHERE `setting_key` = :key");
-        $stmt->execute([':key' => $key]);
+        $stmt->execute(array(':key' => $key));
         $val = $stmt->fetchColumn();
         return $val !== false ? $val : $default;
     } catch (\PDOException $e) {
