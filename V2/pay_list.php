@@ -808,7 +808,13 @@ function showDetails(id) {
     const disc = parseFloat(d.discount || 0);
     document.getElementById('mDiscNote').textContent = disc > 0 ? `หักส่วนลด ${fmt(disc)} บาท` : '';
 
-    document.getElementById('mPrintLink').href = 'receipt.php?id_pay=' + d.id_pay;
+    const printBtn = document.getElementById('mPrintLink');
+    if (parseInt(d.pay_status) === 1) {
+        printBtn.style.display = 'inline-flex';
+        printBtn.href = 'receipt.php?id_pay=' + d.id_pay;
+    } else {
+        printBtn.style.display = 'none';
+    }
 
     const modal = document.getElementById('txModal');
     modal.style.display = 'flex';

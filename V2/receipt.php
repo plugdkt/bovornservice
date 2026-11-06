@@ -24,10 +24,59 @@ try {
         die("Access Denied: You do not have permission to view receipts from other branches.");
     }
 
-    if ($pay['pay_status'] == 1) {
-        $pdo->prepare("UPDATE `payment` SET `pay_status` = 2 WHERE `id_pay` = :id_pay")
-            ->execute([':id_pay' => $id_pay]);
-        $pay['pay_status'] = 2;
+    if ($pay['pay_status'] == 3) {
+        http_response_code(403);
+        die("ข้อผิดพลาด: ใบเสร็จนี้ถูกยกเลิกไปแล้ว ไม่สามารถพิมพ์ได้");
+    }
+
+    $is_manager = ($_SESSION['id_emp_type'] == 1);
+    $is_reprint = false;
+
+    // Single-print enforcement: only allowed to print ONCE
+    if ($pay['pay_status'] == 2) {
+        if (!$is_manager) {
+            http_response_code(403);
+            ?>
+            <!DOCTYPE html>
+            <html lang="th">
+            <head>
+                <meta charset="UTF-8">
+                <title>ใบเสร็จพิมพ์แล้ว - Bovorn Service V2</title>
+                <link rel="stylesheet" href="style.css">
+                <style>
+                    body { display:flex; justify-content:center; align-items:center; min-height:85vh; background:#f1f5f9; font-family:'Sarabun', 'TH Sarabun New', Tahoma, sans-serif; }
+                    .locked-card { background:#ffffff; max-width:520px; width:90%; text-align:center; padding:2.5rem 2rem; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.08); border-top:5px solid #dc2626; }
+                </style>
+            </head>
+            <body>
+                <div class="locked-card">
+                    <div style="font-size:3.5rem; margin-bottom:1rem;">🔒</div>
+                    <h2 style="color:#dc2626; margin-bottom:0.75rem; font-weight:700;">ใบเสร็จนี้ถูกพิมพ์ไปแล้ว</h2>
+                    <p style="color:#475569; font-size:1rem; line-height:1.6; margin-bottom:1.5rem;">
+                        ใบเสร็จเลขที่ <strong>#<?php echo htmlspecialchars($pay['id_pay']); ?></strong> ได้รับการพิมพ์ไปแล้วเรียบร้อย<br>
+                        <span style="color:#dc2626; font-weight:600;">ระบบอนุญาตให้สั่งพิมพ์ได้เพียง 1 ครั้งเท่านั้น</span><br>
+                        เพื่อป้องกันการแก้ไขข้อมูลและป้องกันการออกบิลซ้ำ
+                    </p>
+                    <div style="display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
+                        <button onclick="window.close()" class="btn btn-secondary">ปิดหน้าต่างนี้</button>
+                        <a href="billing.php" class="btn btn-primary" style="background:#2563eb; color:#fff; text-decoration:none; padding:9px 18px; border-radius:8px;">กลับหน้ารายการขาย</a>
+                    </div>
+                </div>
+            </body>
+            </html>
+            <?php
+            exit;
+        } else {
+            // Manager reprint permitted with audit watermark
+            $is_reprint = true;
+        }
+    } else {
+        // First and only print: transition from draft (1) to completed/printed (2)
+        if ($pay['pay_status'] == 1) {
+            $pdo->prepare("UPDATE `payment` SET `pay_status` = 2 WHERE `id_pay` = :id_pay")
+                ->execute([':id_pay' => $id_pay]);
+            $pay['pay_status'] = 2;
+        }
     }
 } catch (\PDOException $e) {
     error_log("Receipt error: " . $e->getMessage());
@@ -545,7 +594,7 @@ body {
 
 <?php
 // Reusable function to render one receipt column
-function renderReceipt(array $pay, $type, $label, $branch_name, $branch_addr, $branch_tel, $tx_date, $tx_time, array $services) {
+function renderReceipt(array $pay, $type, $label, $branch_name, $branch_addr, $branch_tel, $tx_date, $tx_time, array $services, $is_reprint = false) {
     $is_original = ($type === 'original');
 ?>
 <div class="receipt" data-label="<?php echo $label; ?>">
@@ -562,7 +611,12 @@ function renderReceipt(array $pay, $type, $label, $branch_name, $branch_addr, $b
                 </div>
             </div>
         </div>
-        <span class="receipt-type-badge">ใบเสร็จรับเงิน &middot; <?php echo $is_original ? 'ต้นฉบับ' : 'สำเนา'; ?></span>
+        <span class="receipt-type-badge">
+            <?php if ($is_reprint): ?>
+                <span style="color:#fca5a5; font-weight:800;">[พิมพ์ซ้ำ]</span>&nbsp;
+            <?php endif; ?>
+            ใบเสร็จรับเงิน &middot; <?php echo $is_original ? 'ต้นฉบับ' : 'สำเนา'; ?>
+        </span>
     </div>
 
     <!-- ── Body ── -->
@@ -688,9 +742,14 @@ function renderReceipt(array $pay, $type, $label, $branch_name, $branch_addr, $b
 </div><!-- /.receipt -->
 <?php } ?>
 
+<?php if (!empty($is_reprint)): ?>
+    <div style="background:#fee2e2; color:#991b1b; padding:10px 16px; text-align:center; font-weight:700; border-radius:8px; margin:0 auto 16px auto; max-width:1100px; border:1px solid #fca5a5;" class="no-print">
+        ⚠️ หมายเหตุ: ใบเสร็จเลขที่ #<?php echo $pay['id_pay']; ?> เคยถูกพิมพ์ไปแล้ว — กำลังพิมพ์ซ้ำโดยผู้จัดการ (Manager Reprint)
+    </div>
+<?php endif; ?>
 <div class="page">
-    <?php renderReceipt($pay, 'copy',     'COPY',     $branch_name, $branch_addr, $branch_tel, $tx_date, $tx_time, $services); ?>
-    <?php renderReceipt($pay, 'original', 'ORIGINAL', $branch_name, $branch_addr, $branch_tel, $tx_date, $tx_time, $services); ?>
+    <?php renderReceipt($pay, 'copy',     $is_reprint ? 'REPRINT' : 'COPY',     $branch_name, $branch_addr, $branch_tel, $tx_date, $tx_time, $services, $is_reprint); ?>
+    <?php renderReceipt($pay, 'original', $is_reprint ? 'REPRINT' : 'ORIGINAL', $branch_name, $branch_addr, $branch_tel, $tx_date, $tx_time, $services, $is_reprint); ?>
 </div>
 
 <!-- Screen-only action bar -->

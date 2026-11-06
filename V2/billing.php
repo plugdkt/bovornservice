@@ -645,9 +645,15 @@ try {
                                             </td>
                                             <td class="text-center no-print" style="display: flex; gap: 0.45rem; justify-content: center; align-items: center;">
                                                 <!-- Print Receipt button -->
-                                                <a href="receipt.php?id_pay=<?php echo $tp['id_pay']; ?>" class="btn btn-primary btn-sm" target="_blank" style="font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 0.25rem;">
-                                                    🖨️ พิมพ์ใบเสร็จ
-                                                </a>
+                                                <?php if ($tp['pay_status'] == 1): ?>
+                                                    <a href="receipt.php?id_pay=<?php echo $tp['id_pay']; ?>" class="btn btn-primary btn-sm" target="_blank" style="font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                        🖨️ พิมพ์ใบเสร็จ
+                                                    </a>
+                                                <?php else: ?>
+                                                    <button type="button" class="btn btn-secondary btn-sm" disabled style="font-size: 11px; padding: 4px 10px; opacity: 0.55; cursor: not-allowed; display: inline-flex; align-items: center; gap: 0.25rem; background-color: #f1f5f9; border-color: #cbd5e1; color: #64748b;" title="ใบเสร็จนี้ถูกพิมพ์แล้ว ไม่อนุญาตให้พิมพ์ซ้ำ">
+                                                        🔒 พิมพ์แล้ว
+                                                    </button>
+                                                <?php endif; ?>
                                                 
                                                 <!-- Edit button -->
                                                 <?php if ($tp['pay_status'] == 1): ?>

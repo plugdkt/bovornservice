@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // check_payin.php
 // Verification screen for sales receipts in Bovorn Service V2
 
@@ -24,6 +24,12 @@ try {
     
     if (!$pay) {
         die("Error: Transaction not found.");
+    }
+
+    // IDOR Protection: Clerks can only view receipts belonging to their own branch
+    if ($_SESSION['id_emp_type'] != 1 && $pay['id_branch'] != $_SESSION['id_branch']) {
+        http_response_code(403);
+        die("Access Denied: You do not have permission to view receipts from other branches.");
     }
 } catch (\PDOException $e) {
     die("Database Error: " . $e->getMessage());
@@ -165,9 +171,15 @@ try {
                         </div>
                         <div style="display: flex; gap: 1rem;">
                             <a href="billing.php" class="btn btn-secondary">🔙 ย้อนกลับหน้าการขาย</a>
-                            <a href="receipt.php?id_pay=<?php echo $pay['id_pay']; ?>" class="btn btn-primary" style="padding-left: 2rem; padding-right: 2rem;">
-                                🖨️ ยืนยันพิมพ์ใบเสร็จ
-                            </a>
+                            <?php if ($pay['pay_status'] == 1): ?>
+                                <a href="receipt.php?id_pay=<?php echo $pay['id_pay']; ?>" class="btn btn-primary" style="padding-left: 2rem; padding-right: 2rem;">
+                                    🖨️ ยืนยันพิมพ์ใบเสร็จ
+                                </a>
+                            <?php else: ?>
+                                <button type="button" class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed; padding-left: 2rem; padding-right: 2rem;" title="ใบเสร็จนี้ถูกพิมพ์ไปแล้ว ไม่สามารถพิมพ์ซ้ำได้">
+                                    🔒 พิมพ์ใบเสร็จแล้ว
+                                </button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

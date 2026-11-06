@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // dashboard.php
 // Modern Interactive Sales Dashboard for Bovorn Service V2
 
@@ -1109,8 +1109,14 @@ try {
             document.getElementById('modalDateTime').innerText = `${data.pay_day}/${data.pay_month}/${parseInt(data.pay_year) + 543} เวลา ${data.pay_time} น.`;
             document.getElementById('modalBranchName').innerText = data.branch_name ? data.branch_name : (parseInt(data.id_branch) === 1 ? 'ดอกคำใต้' : 'ท่าวังทอง');
             
-            // Set print link
-            document.getElementById('modalPrintLink').href = 'receipt.php?id_pay=' + data.id_pay;
+            // Set print link (only allow clerks to print if pay_status == 1, managers can reprint)
+            const printBtn = document.getElementById('modalPrintLink');
+            if (parseInt(data.pay_status) === 1 || <?php echo $_SESSION['id_emp_type'] == 1 ? 'true' : 'false'; ?>) {
+                printBtn.style.display = 'inline-flex';
+                printBtn.href = 'receipt.php?id_pay=' + data.id_pay;
+            } else {
+                printBtn.style.display = 'none';
+            }
             
             // Show modal
             const modal = document.getElementById('transactionModal');
