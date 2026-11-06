@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // receipt.php — Modern receipt design for Bovorn Service V2
 date_default_timezone_set('Asia/Bangkok');
 require("db_connect.php");
@@ -18,12 +18,21 @@ try {
     $pay = $stmt->fetch();
     if (!$pay) die("Error: Transaction not found.");
 
+    // IDOR Protection: Clerks can only view receipts belonging to their own branch
+    if ($_SESSION['id_emp_type'] != 1 && $pay['id_branch'] != $_SESSION['id_branch']) {
+        http_response_code(403);
+        die("Access Denied: You do not have permission to view receipts from other branches.");
+    }
+
     if ($pay['pay_status'] == 1) {
         $pdo->prepare("UPDATE `payment` SET `pay_status` = 2 WHERE `id_pay` = :id_pay")
             ->execute([':id_pay' => $id_pay]);
         $pay['pay_status'] = 2;
     }
-} catch (\PDOException $e) { die("Database Error: " . $e->getMessage()); }
+} catch (\PDOException $e) {
+    error_log("Receipt error: " . $e->getMessage());
+    die("Database Error: Could not retrieve transaction details.");
+}
 
 $tx_time    = substr($pay['pay_time'], 0, 5); // HH:MM
 $tx_date    = sprintf('%02d/%02d/%d', $pay['pay_day'], $pay['pay_month'], $pay['pay_year'] + 543);

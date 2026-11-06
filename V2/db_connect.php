@@ -1,12 +1,21 @@
-<?php
+﻿<?php
 // db_connect.php
 // Database connection using PDO for Bovorn Service V2
 
-// Force UTF-8 encoding header to prevent garbled Thai characters on production servers
+// Security Headers
 if (!headers_sent()) {
     header('Content-Type: text/html; charset=utf-8');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
 }
 
+// Secure session configuration
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    ini_set('session.use_strict_mode', '1');
+}
 
 // Polyfill for password_hash and password_verify on PHP < 5.5
 if (!function_exists('password_hash')) {
@@ -115,8 +124,35 @@ function check_login($allowed_roles = []) {
     
     if (!empty($allowed_roles)) {
         if (!in_array($_SESSION['id_emp_type'], $allowed_roles)) {
+            http_response_code(403);
             die("Access Denied: You do not have permission to view this page.");
         }
+    }
+}
+
+// ── CSRF Protection Helpers ────────────────────────────────────────
+function csrf_token() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function csrf_field() {
+    return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') . '">';
+}
+
+function validate_csrf() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (empty($token) || !hash_equals(csrf_token(), $token)) {
+        http_response_code(403);
+        die("Invalid or missing CSRF token. Request blocked for security.");
     }
 }
 

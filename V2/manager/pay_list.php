@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // manager/pay_list.php
 // Optimized Sales and Revenue Report Dashboard (Manager View) with Pagination, Popups & Quick Filters
 date_default_timezone_set('Asia/Bangkok');
@@ -950,7 +950,11 @@ if ($is_daily) {
                                             <td class="text-center no-print" style="display: flex; gap: 0.35rem; justify-content: center; align-items: center;">
                                                 <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 11px;" onclick="showDetails(<?php echo $p['id_pay']; ?>)">ตรวจสอบ</button>
                                                 <?php if (!$is_cancelled): ?>
-                                                    <a href="cancel_receipt.php?id_pay=<?php echo $p['id_pay']; ?>" class="btn btn-danger btn-sm" style="padding: 2px 8px; font-size: 11px;" onclick="return confirm('กรุณายืนยันการยกเลิกใบเสร็จนี้อีกครั้ง !!!');">ยกเลิก</a>
+                                                    <form method="POST" action="cancel_receipt.php" style="display:inline;" onsubmit="return confirm('กรุณายืนยันการยกเลิกใบเสร็จนี้อีกครั้ง !!!');">
+                                                        <?php echo csrf_field(); ?>
+                                                        <input type="hidden" name="id_pay" value="<?php echo $p['id_pay']; ?>">
+                                                        <button type="submit" class="btn btn-danger btn-sm" style="padding: 2px 8px; font-size: 11px;">ยกเลิก</button>
+                                                    </form>
                                                 <?php else: ?>
                                                     <span class="badge" style="background-color: #ef4444; color: #fff; font-size: 10px; padding: 3px 6px; font-weight: 600; opacity: 0.85; cursor: not-allowed;">ยกเลิกแล้ว</span>
                                                 <?php endif; ?>
@@ -1143,7 +1147,7 @@ if ($is_daily) {
 
         // Store payments displayed on the current page for details lookup
         const paymentDetails = <?php 
-            $json = json_encode($payments ? $payments : [], JSON_UNESCAPED_UNICODE); 
+            $json = json_encode($payments ? $payments : [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); 
             echo $json !== false ? $json : '[]'; 
         ?>;
 

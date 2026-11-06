@@ -1,10 +1,17 @@
-<?php
+﻿<?php
 // manager/cancel_receipt.php
 // Cancel transaction transaction (sets status to 3) for Bovorn Service V2
 
 require("con_db.php");
 
-$id_pay = isset($_GET['id_pay']) ? intval($_GET['id_pay']) : 0;
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    die("Method Not Allowed: Cancellation requires POST method.");
+}
+
+validate_csrf();
+
+$id_pay = isset($_POST['id_pay']) ? intval($_POST['id_pay']) : 0;
 
 if ($id_pay > 0) {
     try {

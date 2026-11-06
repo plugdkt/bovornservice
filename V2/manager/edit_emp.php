@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // manager/edit_emp.php
 // Edit employee details (Manager view) for Bovorn Service V2
 
@@ -34,6 +34,7 @@ try {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_csrf();
     $name = trim($_POST['name']);
     $addr = trim($_POST['addr']);
     $phone = trim($_POST['phone']);
@@ -146,6 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     
                     <form action="edit_emp.php?id_emp=<?php echo $emp['id_emp']; ?>" method="POST" id="editEmpForm" onsubmit="return validateForm()">
+                        <?php echo csrf_field(); ?>
                         <div class="form-group">
                             <label for="name" class="form-label">ชื่อ - นามสกุล <span style="color:var(--danger)">*</span></label>
                             <input type="text" name="name" id="name" class="form-control" required value="<?php echo htmlspecialchars($emp['name']); ?>">

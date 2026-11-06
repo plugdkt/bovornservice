@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // search_customer.php
 // AJAX endpoint: customer autocomplete with autofill data
 //   ?q=...            search by customer name  (latest bill per name)
@@ -72,6 +72,7 @@ try {
     echo json_encode($rows, JSON_UNESCAPED_UNICODE);
 
 } catch (\PDOException $e) {
+    error_log("search_customer error: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+    echo json_encode(['error' => 'Database error']);
 }

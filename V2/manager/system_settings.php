@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // manager/system_settings.php
 // System Settings dashboard (Manager view) for Bovorn Service V2
 // Configures referral fees dynamically
@@ -8,6 +8,7 @@ check_login([1]); // Only manager (emp_type = 1) is allowed
 
 // Handle settings update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_settings') {
+    validate_csrf();
     $tax_car_fee = trim($_POST['tax_car_fee']);
     $tax_motorcycle_fee = trim($_POST['tax_motorcycle_fee']);
     
@@ -104,6 +105,7 @@ $current_motorcycle_fee = floatval(get_system_setting('tax_motorcycle_fee', 5));
                     </div>
                     
                     <form action="system_settings.php" method="POST">
+                        <?php echo csrf_field(); ?>
                         <input type="hidden" name="action" value="save_settings">
                         
                         <div class="form-section-title">

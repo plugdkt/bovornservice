@@ -1,6 +1,9 @@
-<?php
+﻿<?php
 // migrate.php
-// Migration script to copy and upgrade data from bovornserv_db to bovornserv_v2_db
+// Migration script to copy and upgrade data from bovornserv_db to bovornserv_v2_db (Restricted to Managers)
+
+require_once("db_connect.php");
+check_login([1]); // Security enforcement: Only managers (role = 1) can access
 
 header('Content-Type: text/html; charset=utf-8');
 echo "<h2>Bovorn Service V2 - Database Migration Tool</h2>";

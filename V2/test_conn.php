@@ -1,11 +1,12 @@
-<?php
+﻿<?php
 // V2/test_conn.php
-// Script to test database connection and verify usernames/roles
+// Script to test database connection and verify usernames/roles (Restricted to Managers)
+
+require("db_connect.php"); // Connects using PDO
+check_login([1]); // Security enforcement: Only managers (role = 1) can access
 
 header('Content-Type: text/html; charset=utf-8');
 echo "<h2>Bovorn Service V2 - Database Connection Test Page</h2>";
-
-require("db_connect.php"); // Connects using PDO
 
 try {
     // 1. Verify Connection

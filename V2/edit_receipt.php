@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // edit_receipt.php
 // Edit transaction details for Bovorn Service V2 (Draft status only)
 
@@ -22,6 +22,12 @@ try {
         die("Error: Transaction not found.");
     }
     
+    // IDOR Protection: Clerks can only edit receipts belonging to their own branch
+    if ($_SESSION['id_emp_type'] != 1 && $pay['id_branch'] != $_SESSION['id_branch']) {
+        http_response_code(403);
+        die("Access Denied: You do not have permission to edit receipts from other branches.");
+    }
+    
     // 2. Security Check: Only allow editing if pay_status is 1 (Draft)
     if ($pay['pay_status'] != 1) {
         die("Access Denied: This receipt has already been printed or cancelled, and cannot be edited.");
@@ -39,6 +45,7 @@ try {
 
 // 3. Process Form POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_csrf();
     $name_cus = trim($_POST['name_cus']);
     $addr_cus = trim($_POST['addr_cus']);
     $phone_cus = trim($_POST['phone_cus']);
@@ -138,7 +145,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
         
     } catch (\PDOException $e) {
-        $db_error = "เกิดข้อผิดพลาดในการบันทึกการแก้ไข: " . $e->getMessage();
+        error_log("Edit receipt error: " . $e->getMessage());
+        $db_error = "เกิดข้อผิดพลาดในการบันทึกการแก้ไข กรุณาลองใหม่อีกครั้ง";
     }
 }
 ?>
@@ -387,6 +395,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
                 
                 <form action="edit_receipt.php?id_pay=<?php echo $pay['id_pay']; ?>" method="POST" id="editForm" onsubmit="return validateForm()">
+                    <?php echo csrf_field(); ?>
                     <div class="card">
                         <!-- Section 1: Customer Info -->
                         <div class="modern-section-title">

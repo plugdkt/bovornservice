@@ -1,10 +1,17 @@
-<?php
+﻿<?php
 // manager/del_emp.php
 // Delete employee account handler (Manager view) for Bovorn Service V2
 
 require("con_db.php");
 
-$id_emp = isset($_GET['id_emp']) ? intval($_GET['id_emp']) : 0;
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    die("Method Not Allowed: Deletion requires POST method.");
+}
+
+validate_csrf();
+
+$id_emp = isset($_POST['id_emp']) ? intval($_POST['id_emp']) : 0;
 $current_manager_id = $_SESSION['id_emp'];
 
 if ($id_emp > 0) {

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // pay_list.php — Sales Report (Clerk view) for Bovorn Service V2
 date_default_timezone_set('Asia/Bangkok');
 require("db_connect.php");
@@ -86,7 +86,10 @@ if ($day > 0 || $month > 0 || $year > 0) {
         $stmt->execute();
         $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    } catch (\PDOException $e) { $db_error = $e->getMessage(); }
+    } catch (\PDOException $e) {
+        error_log("Clerk pay_list error: " . $e->getMessage());
+        $db_error = "เกิดข้อผิดพลาดในการดึงข้อมูลรายงาน";
+    }
 }
 
 // Build a human-readable period label
@@ -738,7 +741,7 @@ function openTaxReferralPopup(url) {
     window.open(url, 'tax_referral_popup', 'width=980,height=850,scrollbars=yes,resizable=yes');
 }
 
-const payData = <?php echo json_encode($payments ?: [], JSON_UNESCAPED_UNICODE); ?>;
+const payData = <?php echo json_encode($payments ?: [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
 function setFilter(type) {
     document.getElementById('filter_type_input').value = type;

@@ -1,15 +1,17 @@
-<?php
+﻿<?php
 // V2/reset_password.php
-// Foolproof password reset utility for Bovorn Service V2
+// Password reset utility for Bovorn Service V2 (Restricted to Managers)
+
+require("db_connect.php"); // Connects using PDO
+check_login([1]); // Security enforcement: Only managers (role = 1) can access
 
 header('Content-Type: text/html; charset=utf-8');
 echo "<h2 style='text-align:center; font-family:sans-serif;'>Bovorn Service V2 - Password Reset Utility</h2>";
 
-require("db_connect.php"); // Connects using PDO
-
 $message = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_csrf();
     $username = trim($_POST['username']);
     $new_password = trim($_POST['new_password']);
     
@@ -38,7 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = "<p style='color:red;'>❌ ไม่พบชื่อผู้ใช้ <strong>" . htmlspecialchars($username) . "</strong> ในระบบ</p>";
             }
         } catch (\PDOException $e) {
-            $message = "<p style='color:red;'>❌ เกิดข้อผิดพลาด: " . htmlspecialchars($e->getMessage()) . "</p>";
+            error_log("Password reset error: " . $e->getMessage());
+            $message = "<p style='color:red;'>❌ เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน กรุณาลองใหม่อีกครั้ง</p>";
         }
     }
 }
@@ -55,6 +58,7 @@ try {
 <div style="background:#f4f4f4; padding:20px; border-radius:8px; max-width:450px; margin:20px auto; border:1px solid #ccc; font-family:sans-serif;">
     <?php echo $message; ?>
     <form method="POST" action="reset_password.php">
+        <?php echo csrf_field(); ?>
         <div style="margin-bottom:15px;">
             <label style="display:block; margin-bottom:5px; font-weight:bold;">เลือกชื่อผู้ใช้ (Username):</label>
             <select name="username" style="width:100%; padding:8px; border-radius:4px;" required>
@@ -75,6 +79,6 @@ try {
         </button>
     </form>
     <p style="text-align:center; font-size:0.85rem; color:#777; margin-top:20px;">
-        <a href="login.php">← ไปหน้าล็อกอิน</a>
+        <a href="dashboard.php">← กลับหน้าหลัก</a>
     </p>
 </div>

@@ -1,11 +1,12 @@
-<?php
+﻿<?php
 // V2/migrate_in_place.php
-// Upgrades the database in-place on production server
+// Upgrades the database in-place on production server (Restricted to Managers)
 
 header('Content-Type: text/html; charset=utf-8');
 echo "<h2>Bovorn Service V2 - Database In-Place Upgrade Tool</h2>";
 
-require("db_connect.php"); // Connects to the database (bovornserv_db) using PDO
+require("db_connect.php"); // Connects to the database using PDO
+check_login([1]); // Security enforcement: Only managers (role = 1) can access
 
 try {
     // 1. Rename original payment tables to keep backup
@@ -90,7 +91,7 @@ try {
         id_pay, id_emp, 1, cus_name, cus_addr, cus_phone, car_regis_id, id_car_type, province_id,
         serv_1, serv_2, serv_2_1, serv_3, serv_4, serv_4_1, serv_4_2, serv_5, serv_6, serv_7, serv_7_1,
         pay_sum, discount, pay_total, pay_status, pay_day, pay_month, pay_year, pay_time
-    FROM `payment_v1`;");
+    ) FROM `payment_v1`;");
     
     // 5. Migrate Branch 2 data if backup exists
     $stmt = $pdo->query("SHOW TABLES LIKE 'payment2_v1'");
@@ -108,7 +109,7 @@ try {
                 id_pay + 100000, id_emp, 2, cus_name, cus_addr, cus_phone, car_regis_id, id_car_type, province_id,
                 serv_1, serv_2, serv_2_1, serv_3, serv_4, serv_4_1, serv_4_2, serv_5, serv_6, serv_7, serv_7_1,
                 pay_sum, discount, pay_total, pay_status, pay_day, pay_month, pay_year, pay_time
-            FROM `payment2`;");
+            ) FROM `payment2`;");
         }
     } else {
         echo "Migrating data from Branch 2 backup (payment2_v1)...<br/>";
@@ -120,7 +121,7 @@ try {
             id_pay + 100000, id_emp, 2, cus_name, cus_addr, cus_phone, car_regis_id, id_car_type, province_id,
             serv_1, serv_2, serv_2_1, serv_3, serv_4, serv_4_1, serv_4_2, serv_5, serv_6, serv_7, serv_7_1,
             pay_sum, discount, pay_total, pay_status, pay_day, pay_month, pay_year, pay_time
-        FROM `payment2_v1`;");
+        ) FROM `payment2_v1`;");
     }
     
     // 6. Hash employee passwords

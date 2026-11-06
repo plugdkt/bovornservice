@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // billing.php
 // Clerk sales entry form for Bovorn Service V2
 
@@ -36,6 +36,7 @@ try {
 
 // Process Form Submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_csrf();
     date_default_timezone_set('Asia/Bangkok');
     
     $name_cus = trim($_POST['name_cus']);
@@ -137,7 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
         
     } catch (\PDOException $e) {
-        $db_error = "เกิดข้อผิดพลาดในการบันทึกข้อมูล: " . $e->getMessage();
+        error_log("Billing insert error: " . $e->getMessage());
+        $db_error = "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง";
     }
 }
 
@@ -677,6 +679,7 @@ try {
             <h2 class="legacy-main-title" style="margin-bottom: 1.5rem;">เพิ่มรายการขายใหม่</h2>
             
             <form action="billing.php" method="POST" id="billingForm" onsubmit="return validateForm()">
+                <?php echo csrf_field(); ?>
                 <div class="modern-billing-card">
                     
                     <!-- Section 1: Customer Info -->

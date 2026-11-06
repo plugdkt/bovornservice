@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // manager/user_manager.php
 // Employee accounts management dashboard (Manager view) for Bovorn Service V2
 
@@ -6,6 +6,7 @@ require("con_db.php");
 
 // POST Action - Add New Employee
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_employee') {
+    validate_csrf();
     $name = trim($_POST['name']);
     $addr = trim($_POST['addr']);
     $phone = trim($_POST['phone']);
@@ -223,7 +224,11 @@ $current_manager_id = $_SESSION['id_emp'];
                                                 <a href="edit_emp.php?id_emp=<?php echo $emp['id_emp']; ?>" class="btn btn-secondary btn-sm" style="padding: 4px 10px;">แก้ไข</a>
                                                 
                                                 <?php if ($emp['id_emp'] != 2 && $emp['id_emp'] != $current_manager_id): ?>
-                                                    <a href="del_emp.php?id_emp=<?php echo $emp['id_emp']; ?>" class="btn btn-danger btn-sm" style="padding: 4px 10px;" onclick="return confirm('ยืนยันที่จะลบบัญชีพนักงานของ <?php echo htmlspecialchars($emp['name']); ?> ออกจากระบบอย่างถาวรหรือไม่?');">ลบ</a>
+                                                    <form method="POST" action="del_emp.php" style="display:inline;" onsubmit="return confirm('ยืนยันที่จะลบบัญชีพนักงานของ <?php echo htmlspecialchars($emp['name']); ?> ออกจากระบบอย่างถาวรหรือไม่?');">
+                                                        <?php echo csrf_field(); ?>
+                                                        <input type="hidden" name="id_emp" value="<?php echo $emp['id_emp']; ?>">
+                                                        <button type="submit" class="btn btn-danger btn-sm" style="padding: 4px 10px;">ลบ</button>
+                                                    </form>
                                                 <?php else: ?>
                                                     <button class="btn btn-secondary btn-sm" style="padding: 4px 10px; opacity: 0.5; cursor: not-allowed;" disabled title="ไม่สามารถลบบัญชีผู้จัดการหลักหรือบัญชีของคุณเองได้">ลบ</button>
                                                 <?php endif; ?>
@@ -247,6 +252,7 @@ $current_manager_id = $_SESSION['id_emp'];
                 <button type="button" class="modal-close-btn" onclick="closeAddModal()">&times;</button>
             </div>
             <form action="user_manager.php" method="POST" id="addEmpForm" onsubmit="return validateForm()">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="add_employee">
                 
                 <div class="form-group">
