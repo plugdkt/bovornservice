@@ -206,7 +206,7 @@ function validate_csrf() {
     }
 }
 
-// ── Auto-setup system settings table ───────────────────────────────
+// ── Auto-setup system settings & daily expenses table ────────────────
 try {
     $pdo->query("CREATE TABLE IF NOT EXISTS `system_settings` (
       `setting_key` varchar(50) NOT NULL,
@@ -218,6 +218,18 @@ try {
     $pdo->query("INSERT IGNORE INTO `system_settings` (`setting_key`, `setting_value`, `setting_desc`) VALUES
     ('tax_car_fee', '10', 'ค่าส่งต่อภาษี รถยนต์ (บาท/คัน)'),
     ('tax_motorcycle_fee', '5', 'ค่าส่งต่อภาษี รถจักรยานยนต์ (บาท/คัน)');");
+
+    $pdo->query("CREATE TABLE IF NOT EXISTS `daily_expense` (
+      `id_expense` int(11) NOT NULL AUTO_INCREMENT,
+      `id_branch` tinyint(1) NOT NULL,
+      `expense_date` date NOT NULL,
+      `expense_desc` varchar(255) NOT NULL,
+      `expense_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+      `id_emp` mediumint(5) DEFAULT NULL,
+      `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (`id_expense`),
+      KEY `idx_branch_date` (`id_branch`, `expense_date`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 } catch (\PDOException $e) {
     // Fail silently to prevent interrupting user actions if DB permissions restrict DDL
 }

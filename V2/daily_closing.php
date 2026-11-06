@@ -1,10 +1,8 @@
 <?php
 // daily_closing.php — สรุปส่งยอดรายวัน (Bovorn Service V2)
-// Opened as a popup from the "สรุปส่งยอดรายวัน" button next to the tax-referral button in the sales reports.
 // Live daily closing report for one branch: income (by service, cash/transfer), expenses
-// (tax forwarding = same total as print_tax_referral.php, plus other expenses typed in on this page)
+// (tax forwarding = same total as print_tax_referral.php, plus other expenses saved in database)
 // and the cash to transfer into the account = cash − tax forwarding − other expenses.
-// Nothing is saved: other expenses exist only on the page/printout.
 
 require("db_connect.php");
 require("daily_closing_lib.php");
@@ -30,6 +28,65 @@ $thai_months = [1 => 'มกราคม', 'กุมภาพันธ์', '�
                 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
 $db_error = null;
+
+// ── Handle Save Expenses POST ──
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_expenses') {
+    validate_csrf();
+    
+    // Authorization check: clerks can only save for their own branch
+    if (!$is_manager && $id_branch != intval($_SESSION['id_branch'])) {
+        http_response_code(403);
+        die("Access Denied: You cannot modify expenses for another branch.");
+    }
+    
+    $post_day = isset($_POST['day']) ? intval($_POST['day']) : $day;
+    $post_month = isset($_POST['month']) ? intval($_POST['month']) : $month;
+    $post_year = isset($_POST['year']) ? intval($_POST['year']) : $year_be;
+    $post_year_ad = $post_year > 2500 ? $post_year - 543 : $post_year;
+    $exp_date_str = sprintf('%04d-%02d-%02d', $post_year_ad, $post_month, $post_day);
+    
+    $descriptions = isset($_POST['expense_desc']) && is_array($_POST['expense_desc']) ? $_POST['expense_desc'] : [];
+    $amounts = isset($_POST['expense_amount']) && is_array($_POST['expense_amount']) ? $_POST['expense_amount'] : [];
+    $id_emp = isset($_SESSION['id_emp']) ? intval($_SESSION['id_emp']) : null;
+    
+    try {
+        $pdo->beginTransaction();
+        
+        // Remove previous expense records for this branch and date
+        $del_stmt = $pdo->prepare("DELETE FROM `daily_expense` WHERE id_branch = :branch AND expense_date = :exp_date");
+        $del_stmt->execute([':branch' => $id_branch, ':exp_date' => $exp_date_str]);
+        
+        // Insert new records
+        $ins_stmt = $pdo->prepare("INSERT INTO `daily_expense` (id_branch, expense_date, expense_desc, expense_amount, id_emp) VALUES (:branch, :exp_date, :desc, :amount, :id_emp)");
+        
+        $len = count($descriptions);
+        for ($i = 0; $i < $len; $i++) {
+            $desc = trim($descriptions[$i]);
+            $amt = isset($amounts[$i]) ? floatval($amounts[$i]) : 0;
+            if ($desc !== '' && $amt > 0) {
+                $ins_stmt->execute([
+                    ':branch' => $id_branch,
+                    ':exp_date' => $exp_date_str,
+                    ':desc' => $desc,
+                    ':amount' => $amt,
+                    ':id_emp' => $id_emp
+                ]);
+            }
+        }
+        
+        $pdo->commit();
+        header("Location: daily_closing.php?day=$post_day&month=$post_month&year=$post_year&id_branch=$id_branch&saved=1");
+        exit;
+    } catch (\PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log("Save daily expenses error: " . $e->getMessage());
+        $db_error = "เกิดข้อผิดพลาดในการบันทึกรายจ่าย กรุณาลองใหม่อีกครั้ง";
+    }
+}
+
+// ── Query branch list and totals ──
 try {
     $branches = $pdo->query("SELECT id_branch, branch_name FROM `branch` ORDER BY id_branch")->fetchAll(PDO::FETCH_KEY_PAIR);
     $income = daily_closing_totals($pdo, $day, $month, $year_ad, $id_branch);
@@ -38,7 +95,7 @@ try {
     $db_error = "เกิดข้อผิดพลาดในการดึงข้อมูล กรุณาลองใหม่อีกครั้ง";
     $branches = [];
     $income = array_fill_keys(['bills', 'drafts', 'serv_1', 'serv_2', 'serv_3', 'serv_4', 'serv_5', 'serv_6', 'serv_7', 'discount', 'total',
-        'cash', 'transfer', 'tax_total', 'cars', 'motorcycles', 'cancelled', 'forward_fee', 'tax_expense', 'cash_to_account'], 0);
+        'cash', 'transfer', 'tax_total', 'cars', 'motorcycles', 'cancelled', 'forward_fee', 'tax_expense', 'other_expenses', 'cash_to_account'], 0);
     $income['car_rate'] = floatval(get_system_setting('tax_car_fee', 10));
     $income['motorcycle_rate'] = floatval(get_system_setting('tax_motorcycle_fee', 5));
 }
@@ -47,6 +104,17 @@ $cancelled       = $income['cancelled'];
 $car_rate        = $income['car_rate'];
 $motorcycle_rate = $income['motorcycle_rate'];
 $tax_expense     = $income['tax_expense'];
+
+// ── Query saved other expenses for this date and branch ──
+$exp_date_str = sprintf('%04d-%02d-%02d', $year_ad, $month, $day);
+$saved_expenses = [];
+try {
+    $exp_stmt = $pdo->prepare("SELECT expense_desc, expense_amount FROM `daily_expense` WHERE id_branch = :branch AND expense_date = :exp_date ORDER BY id_expense ASC");
+    $exp_stmt->execute([':branch' => $id_branch, ':exp_date' => $exp_date_str]);
+    $saved_expenses = $exp_stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (\PDOException $e) {
+    error_log("Fetch daily expenses error: " . $e->getMessage());
+}
 
 $branch_name = isset($branches[$id_branch]) ? $branches[$id_branch] : ('สาขา ' . $id_branch);
 $date_label  = $day . ' ' . $thai_months[$month] . ' ' . $year_be;
@@ -89,7 +157,7 @@ function baht($n) { return number_format((float)$n, 2); }
         .signatures { display: none; }
         @media print {
             .expense-input { border: none; padding: 0; }
-            .expense-row.empty, .remove-col { display: none !important; }
+            .expense-row.empty, .remove-col, .no-print { display: none !important; }
             .closing-result { background: none !important; border: 2px solid #000; }
             .signatures { display: flex; justify-content: space-around; margin-top: 3rem; text-align: center; }
         }
@@ -148,15 +216,22 @@ function baht($n) { return number_format((float)$n, 2); }
                     </form>
                 </div>
 
+                <?php if (isset($_GET['saved']) && $_GET['saved'] == '1'): ?>
+                    <div class="badge badge-success no-print" style="display: block; width: 100%; text-align: center; padding: 0.75rem; margin-bottom: 1.25rem; font-size: 0.875rem; border-radius: var(--radius-md); background: #dcfce7; color: #166534; border: 1px solid #86efac;">
+                        ✅ บันทึกรายการรายจ่ายอื่นๆ ลงฐานข้อมูลเรียบร้อยแล้ว
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($db_error): ?>
+                    <p class="no-print" style="color: #b91c1c; margin-bottom: 1rem; text-align: center; font-weight: 600;"><?php echo htmlspecialchars($db_error); ?></p>
+                <?php endif; ?>
+
                 <div class="card">
                     <div class="report-head">
                         <h2 style="font-size: 1.3rem; font-weight: 800;">สรุปส่งยอดรายวัน — สาขา<?php echo htmlspecialchars($branch_name); ?></h2>
                         <div>ประจำวันที่ <strong><?php echo $date_label; ?></strong></div>
                     </div>
 
-                    <?php if ($db_error): ?>
-                        <p style="color: #b91c1c; margin-bottom: 1rem;"><?php echo htmlspecialchars($db_error); ?></p>
-                    <?php endif; ?>
                     <?php if ($income['drafts'] > 0): ?>
                         <p class="no-print" style="color: #b45309; margin-bottom: 1rem;">⚠️ มีบิลที่ยังไม่พิมพ์ใบเสร็จ <?php echo (int)$income['drafts']; ?> ใบ (นับรวมในยอดแล้ว)</p>
                     <?php endif; ?>
@@ -196,10 +271,15 @@ function baht($n) { return number_format((float)$n, 2); }
                                 <td class="amt"><?php echo baht($tax_expense); ?></td>
                                 <td class="remove-col no-print"></td>
                             </tr>
-                            <tr><th colspan="3">รายจ่ายอื่นๆ (กรอกก่อนพิมพ์ ระบบไม่ได้บันทึกไว้)</th></tr>
+                            <tr><th colspan="3">รายจ่ายอื่นๆ (บันทึกจัดเก็บลงฐานข้อมูล)</th></tr>
                             <tbody id="expenseRows"></tbody>
                             <tr class="no-print">
-                                <td colspan="3"><button type="button" class="btn btn-secondary btn-sm" onclick="addExpenseRow()">+ เพิ่มรายการ</button></td>
+                                <td colspan="3" style="padding-top: 0.75rem;">
+                                    <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
+                                        <button type="button" class="btn btn-secondary btn-sm" onclick="addExpenseRow()">+ เพิ่มรายการ</button>
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="saveExpenses()" style="background:#059669; border-color:#059669; font-weight:600;">💾 บันทึกรายจ่ายลงระบบ</button>
+                                    </div>
+                                </td>
                             </tr>
                             <tr class="sum"><td>รวมรายจ่าย</td><td class="amt" id="expenseTotal"><?php echo baht($tax_expense); ?></td><td class="remove-col no-print"></td></tr>
                         </table>
@@ -231,21 +311,41 @@ function baht($n) { return number_format((float)$n, 2); }
         </div>
     </div>
 
+    <!-- Hidden form to save expenses via POST -->
+    <form id="saveExpenseForm" method="POST" action="daily_closing.php?day=<?php echo $day; ?>&month=<?php echo $month; ?>&year=<?php echo $year_be; ?>&id_branch=<?php echo $id_branch; ?>" style="display:none;">
+        <input type="hidden" name="action" value="save_expenses">
+        <input type="hidden" name="day" value="<?php echo $day; ?>">
+        <input type="hidden" name="month" value="<?php echo $month; ?>">
+        <input type="hidden" name="year" value="<?php echo $year_be; ?>">
+        <input type="hidden" name="id_branch" value="<?php echo $id_branch; ?>">
+        <?php echo csrf_field(); ?>
+    </form>
+
     <script>
         const CASH = <?php echo json_encode((float)$income['cash']); ?>;
         const TRANSFER = <?php echo json_encode((float)$income['transfer']); ?>;
         const TAX_EXPENSE = <?php echo json_encode((float)$tax_expense); ?>;
+        const SAVED_EXPENSES = <?php echo json_encode($saved_expenses ?: [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
         function fmt(n) {
             return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        function addExpenseRow(focus = true) {
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function addExpenseRow(focus = true, initialDesc = '', initialAmt = '') {
             const tr = document.createElement('tr');
-            tr.className = 'expense-row empty';
+            tr.className = 'expense-row' + (initialDesc === '' && !initialAmt ? ' empty' : '');
             tr.innerHTML =
-                '<td><input type="text" class="expense-input" placeholder="รายการ เช่น ค่าน้ำมัน"></td>' +
-                '<td class="amt"><input type="number" step="0.01" min="0" class="expense-input amount" placeholder="0.00"></td>' +
+                '<td><input type="text" class="expense-input" placeholder="รายการ เช่น ค่าน้ำมัน" value="' + escapeHtml(initialDesc) + '"></td>' +
+                '<td class="amt"><input type="number" step="0.01" min="0" class="expense-input amount" placeholder="0.00" value="' + (initialAmt ? parseFloat(initialAmt).toFixed(2) : '') + '"></td>' +
                 '<td class="remove-col no-print"><button type="button" class="btn btn-danger btn-sm" title="ลบรายการ">✕</button></td>';
             tr.querySelectorAll('input').forEach(input => input.addEventListener('input', recalc));
             tr.querySelector('button').addEventListener('click', () => { tr.remove(); recalc(); });
@@ -273,7 +373,41 @@ function baht($n) { return number_format((float)$n, 2); }
             document.getElementById('accountTotal').textContent = fmt(TRANSFER + closing);
         }
 
-        addExpenseRow(false);
+        function saveExpenses() {
+            const form = document.getElementById('saveExpenseForm');
+            form.querySelectorAll('.dyn-input').forEach(el => el.remove());
+            
+            document.querySelectorAll('#expenseRows .expense-row').forEach(tr => {
+                const [descInput, amountInput] = tr.querySelectorAll('input');
+                const desc = descInput.value.trim();
+                const amt = parseFloat(amountInput.value) || 0;
+                if (desc !== '' || amt > 0) {
+                    const hDesc = document.createElement('input');
+                    hDesc.type = 'hidden';
+                    hDesc.name = 'expense_desc[]';
+                    hDesc.value = desc;
+                    hDesc.className = 'dyn-input';
+                    form.appendChild(hDesc);
+                    
+                    const hAmt = document.createElement('input');
+                    hAmt.type = 'hidden';
+                    hAmt.name = 'expense_amount[]';
+                    hAmt.value = amt;
+                    hAmt.className = 'dyn-input';
+                    form.appendChild(hAmt);
+                }
+            });
+            form.submit();
+        }
+
+        // Initialize with saved expenses from database or 1 blank row
+        if (SAVED_EXPENSES && SAVED_EXPENSES.length > 0) {
+            SAVED_EXPENSES.forEach(exp => {
+                addExpenseRow(false, exp.expense_desc, exp.expense_amount);
+            });
+        } else {
+            addExpenseRow(false);
+        }
         recalc();
     </script>
 </body>

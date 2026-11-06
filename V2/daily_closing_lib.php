@@ -38,10 +38,20 @@ function daily_closing_totals($pdo, $day, $month, $year_ad, $id_branch) {
     $stmt->execute($params);
     $t['cancelled'] = (int)$stmt->fetchColumn();
 
+    // Fetch saved other expenses from daily_expense table
+    $exp_date_sql = sprintf('%04d-%02d-%02d', $year_ad, $month, $day);
+    try {
+        $stmt_exp = $pdo->prepare("SELECT COALESCE(SUM(expense_amount), 0) FROM `daily_expense` WHERE id_branch = :branch AND expense_date = :exp_date");
+        $stmt_exp->execute(array(':branch' => $id_branch, ':exp_date' => $exp_date_sql));
+        $t['other_expenses'] = floatval($stmt_exp->fetchColumn());
+    } catch (\PDOException $e) {
+        $t['other_expenses'] = 0;
+    }
+
     $t['car_rate']        = floatval(get_system_setting('tax_car_fee', 10));
     $t['motorcycle_rate'] = floatval(get_system_setting('tax_motorcycle_fee', 5));
     $t['forward_fee']     = $t['cars'] * $t['car_rate'] + $t['motorcycles'] * $t['motorcycle_rate'];
     $t['tax_expense']     = $t['tax_total'] + $t['forward_fee'];
-    $t['cash_to_account'] = $t['cash'] - $t['tax_expense'];
+    $t['cash_to_account'] = $t['cash'] - $t['tax_expense'] - $t['other_expenses'];
     return $t;
 }
