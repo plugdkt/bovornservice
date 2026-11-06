@@ -155,11 +155,9 @@ function baht($n) { return number_format((float)$n, 2); }
         .expense-input.amount { text-align: right; max-width: 160px; }
         .report-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
         .signatures { display: none; }
-        .expense-row.unchecked { opacity: 0.45; background-color: #f8fafc; }
-        .expense-check { width: 18px; height: 18px; cursor: pointer; }
         @media print {
             .expense-input { border: none; padding: 0; background: transparent; }
-            .expense-row.empty, .expense-row.unchecked, .check-col, .remove-col, .no-print { display: none !important; }
+            .expense-row.empty, .remove-col, .no-print { display: none !important; }
             .closing-result { background: none !important; border: 2px solid #000; }
             .signatures { display: flex; justify-content: space-around; margin-top: 3rem; text-align: center; }
         }
@@ -261,7 +259,7 @@ function baht($n) { return number_format((float)$n, 2); }
                         <h3>2. รายจ่าย</h3>
                         <table class="closing-table" id="expenseTable">
                             <tr>
-                                <td colspan="2">
+                                <td>
                                     รายจ่ายต่อภาษี (ตามใบส่งต่อภาษีรายวัน)
                                     <div style="font-size: 0.8rem; color: var(--text-muted);">
                                         ภาษี/ค่าปรับ/ภาษีย้อนหลัง/ค่าเล่ม <?php echo baht($tax['tax_total']); ?>
@@ -273,32 +271,17 @@ function baht($n) { return number_format((float)$n, 2); }
                                 <td class="amt"><?php echo baht($tax_expense); ?></td>
                                 <td class="remove-col no-print"></td>
                             </tr>
-                            <tr>
-                                <th colspan="4" style="background:#f1f5f9; padding: 0.6rem 0.75rem;">
-                                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <span>รายจ่ายอื่นๆ (ติ๊กถูกหน้าแต่ละรายการที่ต้องการบันทึก)</span>
-                                        <span class="no-print" style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">
-                                            <label style="cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
-                                                <input type="checkbox" id="checkAllExpenses" checked onchange="toggleAllExpenses(this)"> เลือกทั้งหมด
-                                            </label>
-                                        </span>
-                                    </div>
-                                </th>
-                            </tr>
+                            <tr><th colspan="3">รายจ่ายอื่นๆ (บันทึกจัดเก็บลงฐานข้อมูล)</th></tr>
                             <tbody id="expenseRows"></tbody>
                             <tr class="no-print">
-                                <td colspan="4" style="padding-top: 0.75rem;">
-                                    <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                                <td colspan="3" style="padding-top: 0.75rem;">
+                                    <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
                                         <button type="button" class="btn btn-secondary btn-sm" onclick="addExpenseRow()">+ เพิ่มรายการ</button>
-                                        <button type="button" class="btn btn-primary btn-sm" onclick="saveExpenses()" style="background:#059669; border-color:#059669; font-weight:600;">💾 บันทึกรวมรายการที่ติ๊กเลือก</button>
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="saveExpenses()" style="background:#059669; border-color:#059669; font-weight:600;">💾 บันทึกรายจ่ายลงระบบ</button>
                                     </div>
                                 </td>
                             </tr>
-                            <tr class="sum">
-                                <td colspan="2">รวมรายจ่าย</td>
-                                <td class="amt" id="expenseTotal"><?php echo baht($tax_expense); ?></td>
-                                <td class="remove-col no-print"></td>
-                            </tr>
+                            <tr class="sum"><td>รวมรายจ่าย</td><td class="amt" id="expenseTotal"><?php echo baht($tax_expense); ?></td><td class="remove-col no-print"></td></tr>
                         </table>
                     </div>
 
@@ -357,48 +340,25 @@ function baht($n) { return number_format((float)$n, 2); }
                 .replace(/'/g, '&#039;');
         }
 
-        function addExpenseRow(focus = true, initialDesc = '', initialAmt = '', isChecked = true) {
+        function addExpenseRow(focus = true, initialDesc = '', initialAmt = '') {
             const tr = document.createElement('tr');
-            tr.className = 'expense-row' + (initialDesc === '' && !initialAmt ? ' empty' : '') + (!isChecked ? ' unchecked' : '');
+            tr.className = 'expense-row' + (initialDesc === '' && !initialAmt ? ' empty' : '');
             tr.innerHTML =
-                '<td class="check-col no-print" style="width: 40px; text-align: center; vertical-align: middle;">' +
-                    '<input type="checkbox" class="expense-check" ' + (isChecked ? 'checked' : '') + ' title="ติ๊กเพื่อเลือกคำนวณและบันทึกรายการนี้">' +
-                '</td>' +
                 '<td><input type="text" class="expense-input" placeholder="รายการ เช่น ค่าน้ำมัน" value="' + escapeHtml(initialDesc) + '"></td>' +
                 '<td class="amt"><input type="number" step="0.01" min="0" class="expense-input amount" placeholder="0.00" value="' + (initialAmt ? parseFloat(initialAmt).toFixed(2) : '') + '"></td>' +
-                '<td class="remove-col no-print" style="width: 40px; text-align: center; vertical-align: middle;"><button type="button" class="btn btn-danger btn-sm" title="ลบรายการ">✕</button></td>';
-            
-            const chk = tr.querySelector('.expense-check');
-            chk.addEventListener('change', () => {
-                tr.classList.toggle('unchecked', !chk.checked);
-                recalc();
-            });
-            tr.querySelectorAll('input.expense-input').forEach(input => input.addEventListener('input', recalc));
+                '<td class="remove-col no-print"><button type="button" class="btn btn-danger btn-sm" title="ลบรายการ">✕</button></td>';
+            tr.querySelectorAll('input').forEach(input => input.addEventListener('input', recalc));
             tr.querySelector('button').addEventListener('click', () => { tr.remove(); recalc(); });
             document.getElementById('expenseRows').appendChild(tr);
-            if (focus) tr.querySelector('input.expense-input').focus();
-        }
-
-        function toggleAllExpenses(master) {
-            document.querySelectorAll('#expenseRows .expense-check').forEach(chk => {
-                chk.checked = master.checked;
-                chk.closest('.expense-row').classList.toggle('unchecked', !master.checked);
-            });
-            recalc();
+            if (focus) tr.querySelector('input').focus();
         }
 
         function recalc() {
             let other = 0;
             document.querySelectorAll('#expenseRows .expense-row').forEach(tr => {
-                const chk = tr.querySelector('.expense-check');
-                const desc = tr.querySelector('input[type="text"]');
-                const amount = tr.querySelector('input.amount');
+                const [desc, amount] = tr.querySelectorAll('input');
                 const value = Math.max(0, parseFloat(amount.value) || 0);
-                const isChecked = chk ? chk.checked : true;
-                
-                if (isChecked) {
-                    other += value;
-                }
+                other += value;
                 tr.classList.toggle('empty', value === 0 && desc.value.trim() === '');
             });
             const closing = CASH - TAX_EXPENSE - other;
@@ -418,14 +378,10 @@ function baht($n) { return number_format((float)$n, 2); }
             
             let count = 0;
             let totalAmt = 0;
-            
             document.querySelectorAll('#expenseRows .expense-row').forEach(tr => {
-                const chk = tr.querySelector('.expense-check');
-                if (!chk || !chk.checked) return; // ข้ามรายการที่ไม่ได้ติ๊กถูก
-                
-                const desc = tr.querySelector('input[type="text"]').value.trim();
-                const amt = parseFloat(tr.querySelector('input.amount').value) || 0;
-                
+                const [descInput, amountInput] = tr.querySelectorAll('input');
+                const desc = descInput.value.trim();
+                const amt = parseFloat(amountInput.value) || 0;
                 if (desc !== '' || amt > 0) {
                     count++;
                     totalAmt += amt;
@@ -444,17 +400,16 @@ function baht($n) { return number_format((float)$n, 2); }
                     form.appendChild(hAmt);
                 }
             });
-
-            if (count === 0) {
-                if (!confirm('คุณไม่ได้ติ๊กเลือกรายการรายจ่ายใดๆ\nหากกดบันทึก ระบบจะล้างรายการรายจ่ายของวันนี้ออกทั้งหมด\n\nต้องการยืนยันบันทึกหรือไม่?')) {
+            
+            if (count > 0) {
+                if (!confirm('ยืนยันบันทึกรายจ่ายจำนวน ' + count + ' รายการ (รวม ' + fmt(totalAmt) + ' บาท) ลงระบบหรือไม่?')) {
                     return;
                 }
             } else {
-                if (!confirm('ยืนยันบันทึกรายจ่ายที่ติ๊กเลือกจำนวน ' + count + ' รายการ\nรวมเป็นเงินทั้งสิ้น ' + fmt(totalAmt) + ' บาท ลงในระบบหรือไม่?')) {
+                if (!confirm('ไม่มีรายการรายจ่ายที่กรอกไว้ ระบบจะล้างรายจ่ายของวันนี้ออกทั้งหมด ต้องการดำเนินการต่อหรือไม่?')) {
                     return;
                 }
             }
-            
             form.submit();
         }
 
