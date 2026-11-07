@@ -120,10 +120,10 @@ if ($pay['serv_7'] > 0)
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* Force A5 Landscape orientation (A4 cut in half) */
+/* Force A4 Portrait orientation (Print 2 twin receipts in top half, bottom half left blank) */
 @page {
-    size: A5 landscape;
-    margin: 3mm 4mm;
+    size: A4 portrait;
+    margin: 4mm 5mm;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -451,12 +451,12 @@ body {
 .btn-ghost:hover { background: #f1f5f9; }
 
 /* ═══════════════════════════
-   PRINT RULES (A5 LANDSCAPE / A6 TWIN SLIPS ENFORCED)
+   PRINT RULES (A4 PORTRAIT: TOP HALF 2 BILLS, BOTTOM HALF BLANK)
 ═══════════════════════════ */
 @media print {
     @page {
-        size: A5 landscape;
-        margin: 3mm 4mm;
+        size: A4 portrait;
+        margin: 4mm 5mm;
     }
 
     html, body {
@@ -497,6 +497,7 @@ body {
         margin: 0 !important;
         padding: 0 !important;
         box-sizing: border-box !important;
+        max-height: 140mm !important; /* Restricts 2 receipts to the top half of A4 */
         page-break-after: avoid !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
@@ -833,15 +834,15 @@ function renderReceipt(array $pay, $type, $label, $branch_name, $branch_addr, $b
         ⚠️ หมายเหตุ: ใบเสร็จเลขที่ #<?php echo $pay['id_pay']; ?> เคยถูกพิมพ์ไปแล้ว — กำลังพิมพ์ซ้ำโดยผู้จัดการ (Manager Reprint)
     </div>
 <?php endif; ?>
-<div class="print-guide no-print" style="max-width:880px; margin:0 auto 14px auto; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:13px; color:#166534;">
+<div class="print-guide no-print" style="max-width:880px; margin:0 auto 14px auto; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:13px; color:#1e40af;">
     <div style="display:flex; align-items:center; gap:10px;">
-        <span style="font-size:24px;">🌿</span>
+        <span style="font-size:24px;">📄</span>
         <div>
-            <strong style="color:#14532d;">โหมดประหยัดกระดาษ 50% (กระดาษ A5 แนวนอน — ตัดแบ่งครึ่งเป็นบิล A6 สองใบ):</strong><br>
-            <span style="font-size:12px; color:#15803d;">ใส่กระดาษ <strong>A5 (นำกระดาษ A4 ตัดแบ่งครึ่ง)</strong> ลงในถาดเครื่องพิมพ์ | ระบบจะพิมพ์ 2 บิลคู่ (สำเนา A6 + ต้นฉบับ A6) พอดีหน้ากระดาษ</span>
+            <strong style="color:#1e3a8a;">โหมดพิมพ์บนกระดาษ A4 (2 บิลคู่ครึ่งบน | ครึ่งล่างปล่อยว่าง):</strong><br>
+            <span style="font-size:12px; color:#2563eb;">ใส่กระดาษ <strong>A4 แนวตั้ง</strong> ตามปกติ | ระบบจะพิมพ์ 2 บิล (สำเนา + ต้นฉบับ) อยู่ในครึ่งบนของกระดาษ และปล่อยครึ่งล่างว่างไว้สำหรับตัดแบ่งครึ่งหรือนำไปใช้ซ้ำ</span>
         </div>
     </div>
-    <button onclick="window.print()" class="btn btn-primary" style="white-space:nowrap; padding:6px 14px; font-size:13px; background:#16a34a; border-color:#16a34a;">🖨️ สั่งพิมพ์ใบเสร็จ</button>
+    <button onclick="window.print()" class="btn btn-primary" style="white-space:nowrap; padding:6px 14px; font-size:13px;">🖨️ สั่งพิมพ์ใบเสร็จ</button>
 </div>
 <div class="page">
     <?php renderReceipt($pay, 'copy',     $is_reprint ? 'REPRINT' : 'COPY',     $branch_name, $branch_addr, $branch_tel, $tx_date, $tx_time, $services, $is_reprint); ?>
