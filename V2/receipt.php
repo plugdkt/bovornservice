@@ -123,7 +123,7 @@ if ($pay['serv_7'] > 0)
 /* Force A4 Portrait orientation (Print 2 twin receipts in top half, bottom half left blank) */
 @page {
     size: A4 portrait;
-    margin: 4mm 5mm;
+    margin: 3mm 5mm;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -456,7 +456,7 @@ body {
 @media print {
     @page {
         size: A4 portrait;
-        margin: 4mm 5mm;
+        margin: 3mm 5mm;
     }
 
     html, body {
@@ -482,8 +482,8 @@ body {
     body {
         background: #ffffff !important;
         font-family: 'Sarabun', 'Tahoma', 'Arial', sans-serif;
-        font-size: 8.5px;
-        line-height: 1.25;
+        font-size: 8px;
+        line-height: 1.2;
     }
     .page {
         display: flex !important;
@@ -497,7 +497,6 @@ body {
         margin: 0 !important;
         padding: 0 !important;
         box-sizing: border-box !important;
-        max-height: 140mm !important; /* Restricts 2 receipts to the top half of A4 */
         page-break-after: avoid !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
@@ -518,6 +517,7 @@ body {
         flex-direction: column !important;
         justify-content: space-between !important;
         height: auto !important;
+        overflow: visible !important;
     }
     .receipt::before {
         display: none !important;
@@ -525,37 +525,37 @@ body {
     .receipt-header {
         background: #ffffff !important;
         color: #000000 !important;
-        padding: 4px 6px !important;
+        padding: 3px 5px !important;
         border-bottom: 1px solid #000000 !important;
     }
     .receipt-header::after {
         display: none !important;
     }
     .brand-row {
-        gap: 5px !important;
-        margin-bottom: 2px !important;
+        gap: 4px !important;
+        margin-bottom: 1px !important;
     }
     .brand-icon {
-        width: 22px !important;
-        height: 22px !important;
-        font-size: 12px !important;
+        width: 18px !important;
+        height: 18px !important;
+        font-size: 11px !important;
         border: 1px solid #000000 !important;
-        border-radius: 3px !important;
+        border-radius: 2px !important;
     }
-    .brand-name { font-size: 11px !important; font-weight: bold !important; line-height: 1.15 !important; }
-    .brand-sub { font-size: 7.5px !important; line-height: 1.2 !important; color: #000000 !important; }
+    .brand-name { font-size: 10px !important; font-weight: bold !important; line-height: 1.15 !important; }
+    .brand-sub { font-size: 7px !important; line-height: 1.15 !important; color: #000000 !important; }
     .receipt-type-badge {
         background: transparent !important;
         border: 1px solid #000000 !important;
         color: #000000 !important;
-        font-size: 8px !important;
+        font-size: 7.5px !important;
         font-weight: bold !important;
-        padding: 1px 5px !important;
-        margin-top: 2px !important;
+        padding: 0.5px 4px !important;
+        margin-top: 1px !important;
     }
     .receipt-body {
-        padding: 4px 6px !important;
-        gap: 4px !important;
+        padding: 3px 5px !important;
+        gap: 2.5px !important;
         flex: 1 !important;
         display: flex !important;
         flex-direction: column !important;
@@ -565,54 +565,54 @@ body {
     .meta-row {
         background: #ffffff !important;
         border: 1px solid #000000 !important;
-        border-left: 3px solid #000000 !important;
-        padding: 3px 5px !important;
+        border-left: 2.5px solid #000000 !important;
+        padding: 2px 4px !important;
     }
-    .meta-no { font-size: 9.5px !important; font-weight: bold !important; color: #000000 !important; }
-    .meta-date { font-size: 7.5px !important; line-height: 1.25 !important; color: #000000 !important; }
+    .meta-no { font-size: 9px !important; font-weight: bold !important; color: #000000 !important; }
+    .meta-date { font-size: 7px !important; line-height: 1.2 !important; color: #000000 !important; }
     
     .info-block {
         background: #ffffff !important;
         border: 1px solid #000000 !important;
-        padding: 3px 5px !important;
+        padding: 2px 4px !important;
     }
     .info-block-title {
-        font-size: 7.5px !important;
+        font-size: 7px !important;
         color: #000000 !important;
         border-bottom: 1px solid #000000 !important;
         padding-bottom: 1px !important;
-        margin-bottom: 2px !important;
+        margin-bottom: 1px !important;
     }
     .info-block-title::after {
         display: none !important;
     }
     .info-grid {
-        gap: 2px 6px !important;
+        gap: 1px 4px !important;
     }
-    .info-item { font-size: 8px !important; line-height: 1.2 !important; }
-    .info-label { font-size: 7px !important; color: #000000 !important; }
-    .info-value { color: #000000 !important; font-size: 8px !important; }
+    .info-item { font-size: 7.5px !important; line-height: 1.15 !important; }
+    .info-label { font-size: 6.5px !important; color: #000000 !important; }
+    .info-value { color: #000000 !important; font-size: 7.5px !important; }
     .plate-badge {
         background: transparent !important;
         border: 1px solid #000000 !important;
         color: #000000 !important;
-        padding: 0 3px !important;
-        font-size: 8px !important;
+        padding: 0 2px !important;
+        font-size: 7.5px !important;
     }
     
     .service-section-title {
-        font-size: 7.5px !important;
+        font-size: 7px !important;
         color: #000000 !important;
         border-bottom: 1px solid #000000 !important;
         padding-bottom: 1px !important;
-        margin-bottom: 2px !important;
+        margin-bottom: 1px !important;
     }
     .service-section-title::after {
         display: none !important;
     }
     
     .service-table {
-        font-size: 8px !important;
+        font-size: 7.5px !important;
         border-collapse: collapse !important;
     }
     .service-table thead tr {
@@ -621,22 +621,22 @@ body {
         border-bottom: 1px solid #000000 !important;
     }
     .service-table thead th {
-        font-size: 7.5px !important;
-        padding: 1.5px 3px !important;
+        font-size: 7px !important;
+        padding: 1px 2px !important;
         color: #000000 !important;
         border: 1px solid #000000 !important;
     }
     .service-table tbody td {
-        padding: 1.5px 3px !important;
+        padding: 1px 2px !important;
         border: 1px solid #000000 !important;
         background: #ffffff !important;
-        line-height: 1.15 !important;
+        line-height: 1.1 !important;
     }
     
     .summary-rows { margin-top: 1px !important; }
     .summary-row {
-        font-size: 8px !important;
-        padding: 1px 3px !important;
+        font-size: 7.5px !important;
+        padding: 1px 2px !important;
     }
     .summary-row.subtotal {
         border-top: 1px dashed #000000 !important;
@@ -645,30 +645,30 @@ body {
         background: #ffffff !important;
         color: #000000 !important;
         border: 1px solid #000000 !important;
-        padding: 2px 4px !important;
-        margin-top: 2px !important;
+        padding: 1.5px 3px !important;
+        margin-top: 1px !important;
     }
-    .summary-row.total .summary-label { font-size: 8.5px !important; font-weight: bold !important; }
-    .summary-row.total .summary-amount { font-size: 10px !important; font-weight: bold !important; }
+    .summary-row.total .summary-label { font-size: 8px !important; font-weight: bold !important; }
+    .summary-row.total .summary-amount { font-size: 9.5px !important; font-weight: bold !important; }
     
     .sig-row {
-        font-size: 7px !important;
+        font-size: 6.5px !important;
         border-top: 1px dashed #000000 !important;
-        padding-top: 2px !important;
-        margin-top: 2px !important;
-        gap: 4px !important;
+        padding-top: 1.5px !important;
+        margin-top: 1px !important;
+        gap: 3px !important;
     }
     .sig-line {
         border-bottom: 1px solid #000000 !important;
-        height: 11px !important;
-        min-width: 50px !important;
+        height: 9px !important;
+        min-width: 45px !important;
         margin-bottom: 1px !important;
     }
-    .sig-name { font-size: 7px !important; }
+    .sig-name { font-size: 6.5px !important; }
     
     .receipt-footer {
-        font-size: 6.5px !important;
-        padding: 1.5px 4px !important;
+        font-size: 6px !important;
+        padding: 1px 3px !important;
         background: #ffffff !important;
         border-top: 1px solid #000000 !important;
         color: #000000 !important;
