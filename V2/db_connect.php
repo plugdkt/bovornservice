@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // db_connect.php
 // Database connection using PDO for Bovorn Service V2
 // Fully backwards-compatible with PHP 5.4+ through PHP 8.x
@@ -270,7 +270,7 @@ function get_system_setting($key, $default = '') {
         return $default;
     }
 }
-?>
+
 
 /**
  * Log payment activity for anti-fraud and audit tracking
