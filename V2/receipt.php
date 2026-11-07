@@ -120,10 +120,10 @@ if ($pay['serv_7'] > 0)
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* Force A4 Landscape orientation in browser printer setup */
+/* Force A5 Landscape orientation (A4 cut in half) */
 @page {
-    size: A4 landscape;
-    margin: 5mm 6mm;
+    size: A5 landscape;
+    margin: 3mm 4mm;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -154,9 +154,9 @@ body {
 /* ── Wrapper: two columns side-by-side ── */
 .page {
     display: flex;
-    gap: 18px;
+    gap: 14px;
     width: 100%;
-    max-width: 1100px;
+    max-width: 880px;
     margin: 0 auto;
 }
 
@@ -451,12 +451,12 @@ body {
 .btn-ghost:hover { background: #f1f5f9; }
 
 /* ═══════════════════════════
-   PRINT RULES (A4 LANDSCAPE ENFORCED)
+   PRINT RULES (A5 LANDSCAPE / A6 TWIN SLIPS ENFORCED)
 ═══════════════════════════ */
 @media print {
     @page {
-        size: A4 landscape;
-        margin: 5mm 6mm;
+        size: A5 landscape;
+        margin: 3mm 4mm;
     }
 
     html, body {
@@ -482,7 +482,8 @@ body {
     body {
         background: #ffffff !important;
         font-family: 'Sarabun', 'Tahoma', 'Arial', sans-serif;
-        font-size: 11px;
+        font-size: 8.5px;
+        line-height: 1.25;
     }
     .page {
         display: flex !important;
@@ -492,7 +493,7 @@ body {
         width: 100% !important;
         min-width: 100% !important;
         max-width: 100% !important;
-        gap: 6mm !important;
+        gap: 4mm !important;
         margin: 0 !important;
         padding: 0 !important;
         box-sizing: border-box !important;
@@ -501,14 +502,14 @@ body {
         break-inside: avoid !important;
     }
     .receipt {
-        flex: 0 0 calc(50% - 3mm) !important;
-        width: calc(50% - 3mm) !important;
-        max-width: calc(50% - 3mm) !important;
-        min-width: calc(50% - 3mm) !important;
+        flex: 0 0 calc(50% - 2mm) !important;
+        width: calc(50% - 2mm) !important;
+        max-width: calc(50% - 2mm) !important;
+        min-width: calc(50% - 2mm) !important;
         box-sizing: border-box !important;
         box-shadow: none !important;
         border: 1px solid #000000 !important;
-        border-radius: 4px !important;
+        border-radius: 3px !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
         background: #ffffff !important;
@@ -523,24 +524,37 @@ body {
     .receipt-header {
         background: #ffffff !important;
         color: #000000 !important;
-        padding: 8px 10px !important;
+        padding: 4px 6px !important;
         border-bottom: 1px solid #000000 !important;
     }
     .receipt-header::after {
         display: none !important;
     }
-    .brand-name { font-size: 13px; font-weight: bold; }
-    .brand-sub { font-size: 9px; color: #000000 !important; }
+    .brand-row {
+        gap: 5px !important;
+        margin-bottom: 2px !important;
+    }
+    .brand-icon {
+        width: 22px !important;
+        height: 22px !important;
+        font-size: 12px !important;
+        border: 1px solid #000000 !important;
+        border-radius: 3px !important;
+    }
+    .brand-name { font-size: 11px !important; font-weight: bold !important; line-height: 1.15 !important; }
+    .brand-sub { font-size: 7.5px !important; line-height: 1.2 !important; color: #000000 !important; }
     .receipt-type-badge {
         background: transparent !important;
         border: 1px solid #000000 !important;
         color: #000000 !important;
-        font-size: 9.5px;
-        font-weight: bold;
+        font-size: 8px !important;
+        font-weight: bold !important;
+        padding: 1px 5px !important;
+        margin-top: 2px !important;
     }
     .receipt-body {
-        padding: 8px 10px !important;
-        gap: 6px !important;
+        padding: 4px 6px !important;
+        gap: 4px !important;
         flex: 1 !important;
         display: flex !important;
         flex-direction: column !important;
@@ -550,65 +564,78 @@ body {
     .meta-row {
         background: #ffffff !important;
         border: 1px solid #000000 !important;
-        border-left: 4px solid #000000 !important;
-        padding: 6px 10px;
+        border-left: 3px solid #000000 !important;
+        padding: 3px 5px !important;
     }
-    .meta-no { font-size: 13px; font-weight: bold; color: #000000 !important; }
-    .meta-date { font-size: 10px; color: #000000 !important; }
+    .meta-no { font-size: 9.5px !important; font-weight: bold !important; color: #000000 !important; }
+    .meta-date { font-size: 7.5px !important; line-height: 1.25 !important; color: #000000 !important; }
     
     .info-block {
         background: #ffffff !important;
         border: 1px solid #000000 !important;
-        padding: 8px 10px;
+        padding: 3px 5px !important;
     }
     .info-block-title {
+        font-size: 7.5px !important;
         color: #000000 !important;
         border-bottom: 1px solid #000000 !important;
-        padding-bottom: 2px;
+        padding-bottom: 1px !important;
+        margin-bottom: 2px !important;
     }
     .info-block-title::after {
         display: none !important;
     }
-    .info-item { font-size: 10.5px; }
-    .info-label { font-size: 9.5px; color: #000000 !important; }
-    .info-value { color: #000000 !important; }
+    .info-grid {
+        gap: 2px 6px !important;
+    }
+    .info-item { font-size: 8px !important; line-height: 1.2 !important; }
+    .info-label { font-size: 7px !important; color: #000000 !important; }
+    .info-value { color: #000000 !important; font-size: 8px !important; }
     .plate-badge {
         background: transparent !important;
         border: 1px solid #000000 !important;
         color: #000000 !important;
+        padding: 0 3px !important;
+        font-size: 8px !important;
     }
     
     .service-section-title {
+        font-size: 7.5px !important;
         color: #000000 !important;
         border-bottom: 1px solid #000000 !important;
+        padding-bottom: 1px !important;
+        margin-bottom: 2px !important;
     }
     .service-section-title::after {
         display: none !important;
     }
     
     .service-table {
-        font-size: 10.5px;
+        font-size: 8px !important;
         border-collapse: collapse !important;
     }
     .service-table thead tr {
         background: #ffffff !important;
         color: #000000 !important;
-        border-bottom: 1.5px solid #000000 !important;
+        border-bottom: 1px solid #000000 !important;
     }
     .service-table thead th {
-        font-size: 10px;
-        padding: 4px 6px;
+        font-size: 7.5px !important;
+        padding: 1.5px 3px !important;
         color: #000000 !important;
         border: 1px solid #000000 !important;
     }
     .service-table tbody td {
-        padding: 3px 6px;
+        padding: 1.5px 3px !important;
         border: 1px solid #000000 !important;
         background: #ffffff !important;
+        line-height: 1.15 !important;
     }
     
+    .summary-rows { margin-top: 1px !important; }
     .summary-row {
-        font-size: 11px;
+        font-size: 8px !important;
+        padding: 1px 3px !important;
     }
     .summary-row.subtotal {
         border-top: 1px dashed #000000 !important;
@@ -616,21 +643,31 @@ body {
     .summary-row.total {
         background: #ffffff !important;
         color: #000000 !important;
-        border: 1.5px solid #000000 !important;
+        border: 1px solid #000000 !important;
+        padding: 2px 4px !important;
+        margin-top: 2px !important;
     }
-    .summary-row.total .summary-amount { font-size: 13px; }
+    .summary-row.total .summary-label { font-size: 8.5px !important; font-weight: bold !important; }
+    .summary-row.total .summary-amount { font-size: 10px !important; font-weight: bold !important; }
     
     .sig-row {
-        font-size: 10px;
+        font-size: 7px !important;
         border-top: 1px dashed #000000 !important;
+        padding-top: 2px !important;
+        margin-top: 2px !important;
+        gap: 4px !important;
     }
     .sig-line {
         border-bottom: 1px solid #000000 !important;
+        height: 11px !important;
+        min-width: 50px !important;
+        margin-bottom: 1px !important;
     }
+    .sig-name { font-size: 7px !important; }
     
     .receipt-footer {
-        font-size: 8.5px;
-        padding: 4px 10px;
+        font-size: 6.5px !important;
+        padding: 1.5px 4px !important;
         background: #ffffff !important;
         border-top: 1px solid #000000 !important;
         color: #000000 !important;
@@ -796,15 +833,15 @@ function renderReceipt(array $pay, $type, $label, $branch_name, $branch_addr, $b
         ⚠️ หมายเหตุ: ใบเสร็จเลขที่ #<?php echo $pay['id_pay']; ?> เคยถูกพิมพ์ไปแล้ว — กำลังพิมพ์ซ้ำโดยผู้จัดการ (Manager Reprint)
     </div>
 <?php endif; ?>
-<div class="print-guide no-print" style="max-width:1100px; margin:0 auto 14px auto; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:13px; color:#1e40af;">
+<div class="print-guide no-print" style="max-width:880px; margin:0 auto 14px auto; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:13px; color:#166534;">
     <div style="display:flex; align-items:center; gap:10px;">
-        <span style="font-size:24px;">🖨️</span>
+        <span style="font-size:24px;">🌿</span>
         <div>
-            <strong style="color:#1e3a8a;">ตั้งค่าการพิมพ์ใบเสร็จ (A4 แนวนอน):</strong> ระบบกำหนดให้พิมพ์เป็น <strong>A4 แนวนอน (Landscape)</strong> แบ่งครึ่งหน้า (สำเนา + ต้นฉบับ) เต็มกระดาษพอดี<br>
-            <span style="font-size:12px; color:#3b82f6;">หากหน้าต่างพิมพ์แสดงเพี้ยน: ให้ตรวจสอบในหน้าต่างพิมพ์ว่า <strong>การจัดวาง = แนวนอน (Landscape)</strong>, <strong>ขนาดกระดาษ = A4</strong> และ <strong>มาตราส่วน = 100% (ค่าเริ่มต้น)</strong></span>
+            <strong style="color:#14532d;">โหมดประหยัดกระดาษ 50% (กระดาษ A5 แนวนอน — ตัดแบ่งครึ่งเป็นบิล A6 สองใบ):</strong><br>
+            <span style="font-size:12px; color:#15803d;">ใส่กระดาษ <strong>A5 (นำกระดาษ A4 ตัดแบ่งครึ่ง)</strong> ลงในถาดเครื่องพิมพ์ | ระบบจะพิมพ์ 2 บิลคู่ (สำเนา A6 + ต้นฉบับ A6) พอดีหน้ากระดาษ</span>
         </div>
     </div>
-    <button onclick="window.print()" class="btn btn-primary" style="white-space:nowrap; padding:6px 14px; font-size:13px;">🖨️ สั่งพิมพ์อีกครั้ง</button>
+    <button onclick="window.print()" class="btn btn-primary" style="white-space:nowrap; padding:6px 14px; font-size:13px; background:#16a34a; border-color:#16a34a;">🖨️ สั่งพิมพ์ใบเสร็จ</button>
 </div>
 <div class="page">
     <?php renderReceipt($pay, 'copy',     $is_reprint ? 'REPRINT' : 'COPY',     $branch_name, $branch_addr, $branch_tel, $tx_date, $tx_time, $services, $is_reprint); ?>
