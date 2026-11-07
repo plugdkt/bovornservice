@@ -116,9 +116,15 @@ if ($pay['serv_7'] > 0)
 <head>
 <meta charset="UTF-8">
 <title>ใบเสร็จรับเงิน #<?php echo $pay['id_pay']; ?> — บวรเซอร์วิส</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* ── Google Font (Sarabun — Thai-optimised) ── */
-@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+/* Force A4 Landscape orientation in browser printer setup */
+@page {
+    size: A4 landscape;
+    margin: 5mm 6mm;
+}
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -445,10 +451,25 @@ body {
 .btn-ghost:hover { background: #f1f5f9; }
 
 /* ═══════════════════════════
-   PRINT RULES
+   PRINT RULES (A4 LANDSCAPE ENFORCED)
 ═══════════════════════════ */
 @media print {
-    @page { size: A4 landscape; margin: 8mm 10mm; }
+    @page {
+        size: A4 landscape;
+        margin: 5mm 6mm;
+    }
+
+    html, body {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 
     *, *::before, *::after {
         color: #000000 !important;
@@ -460,20 +481,41 @@ body {
 
     body {
         background: #ffffff !important;
-        padding: 0;
         font-family: 'Sarabun', 'Tahoma', 'Arial', sans-serif;
         font-size: 11px;
     }
     .page {
-        gap: 14px;
-        max-width: 100%;
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        gap: 6mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
     .receipt {
-        box-shadow: none;
+        flex: 0 0 calc(50% - 3mm) !important;
+        width: calc(50% - 3mm) !important;
+        max-width: calc(50% - 3mm) !important;
+        min-width: calc(50% - 3mm) !important;
+        box-sizing: border-box !important;
+        box-shadow: none !important;
         border: 1px solid #000000 !important;
-        border-radius: 6px;
-        page-break-inside: avoid;
+        border-radius: 4px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
         background: #ffffff !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        height: auto !important;
     }
     .receipt::before {
         display: none !important;
@@ -481,22 +523,29 @@ body {
     .receipt-header {
         background: #ffffff !important;
         color: #000000 !important;
-        padding: 10px 12px 10px;
+        padding: 8px 10px !important;
         border-bottom: 1px solid #000000 !important;
     }
     .receipt-header::after {
         display: none !important;
     }
     .brand-name { font-size: 13px; font-weight: bold; }
-    .brand-sub { font-size: 9.5px; color: #000000 !important; }
+    .brand-sub { font-size: 9px; color: #000000 !important; }
     .receipt-type-badge {
         background: transparent !important;
         border: 1px solid #000000 !important;
         color: #000000 !important;
-        font-size: 10px;
+        font-size: 9.5px;
         font-weight: bold;
     }
-    .receipt-body { padding: 14px 12px 10px; gap: 9px; }
+    .receipt-body {
+        padding: 8px 10px !important;
+        gap: 6px !important;
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+    }
     
     .meta-row {
         background: #ffffff !important;
@@ -586,7 +635,7 @@ body {
         border-top: 1px solid #000000 !important;
         color: #000000 !important;
     }
-    .action-bar { display: none; }
+    .action-bar, .no-print { display: none !important; }
 }
 </style>
 </head>
@@ -747,6 +796,16 @@ function renderReceipt(array $pay, $type, $label, $branch_name, $branch_addr, $b
         ⚠️ หมายเหตุ: ใบเสร็จเลขที่ #<?php echo $pay['id_pay']; ?> เคยถูกพิมพ์ไปแล้ว — กำลังพิมพ์ซ้ำโดยผู้จัดการ (Manager Reprint)
     </div>
 <?php endif; ?>
+<div class="print-guide no-print" style="max-width:1100px; margin:0 auto 14px auto; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:13px; color:#1e40af;">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:24px;">🖨️</span>
+        <div>
+            <strong style="color:#1e3a8a;">ตั้งค่าการพิมพ์ใบเสร็จ (A4 แนวนอน):</strong> ระบบกำหนดให้พิมพ์เป็น <strong>A4 แนวนอน (Landscape)</strong> แบ่งครึ่งหน้า (สำเนา + ต้นฉบับ) เต็มกระดาษพอดี<br>
+            <span style="font-size:12px; color:#3b82f6;">หากหน้าต่างพิมพ์แสดงเพี้ยน: ให้ตรวจสอบในหน้าต่างพิมพ์ว่า <strong>การจัดวาง = แนวนอน (Landscape)</strong>, <strong>ขนาดกระดาษ = A4</strong> และ <strong>มาตราส่วน = 100% (ค่าเริ่มต้น)</strong></span>
+        </div>
+    </div>
+    <button onclick="window.print()" class="btn btn-primary" style="white-space:nowrap; padding:6px 14px; font-size:13px;">🖨️ สั่งพิมพ์อีกครั้ง</button>
+</div>
 <div class="page">
     <?php renderReceipt($pay, 'copy',     $is_reprint ? 'REPRINT' : 'COPY',     $branch_name, $branch_addr, $branch_tel, $tx_date, $tx_time, $services, $is_reprint); ?>
     <?php renderReceipt($pay, 'original', $is_reprint ? 'REPRINT' : 'ORIGINAL', $branch_name, $branch_addr, $branch_tel, $tx_date, $tx_time, $services, $is_reprint); ?>
