@@ -2,21 +2,31 @@
 // car_list.php — Vehicle Inspection (ตรอ.) Report for Bovorn Service V2
 date_default_timezone_set('Asia/Bangkok');
 require("db_connect.php");
-check_login([2]);
+check_login([1, 2]); // Both manager (1) and clerk (2) can access
 
-$id_branch    = $_SESSION['id_branch'];
-$branch_label = $id_branch == 1 ? 'ดอกคำใต้' : 'ท่าวังทอง';
+$is_manager = ($_SESSION['id_emp_type'] == 1);
+$id_branch  = ($is_manager && isset($_GET['id_branch'])) ? intval($_GET['id_branch']) : intval($_SESSION['id_branch']);
+
+if ($id_branch == 1) {
+    $branch_label = 'บวรเซอร์วิสดอกคำใต้';
+} elseif ($id_branch == 2) {
+    $branch_label = 'บวรเซอร์วิสท่าวังทอง';
+} else {
+    $branch_label = 'ทุกสาขา';
+}
 
 $filter_type = isset($_GET['filter_type']) ? $_GET['filter_type'] : 'today';
+$q = isset($_GET['q']) ? trim($_GET['q']) : '';
 
 if ($filter_type === 'today') {
-    $day = intval(date('d')); $month = intval(date('m')); $year = intval(date('Y')) + 543;
+    $day = intval(date('d')); $day2 = 0; $month = intval(date('m')); $year = intval(date('Y')) + 543;
 } elseif ($filter_type === 'month') {
-    $day = 0; $month = intval(date('m')); $year = intval(date('Y')) + 543;
+    $day = 0; $day2 = 0; $month = intval(date('m')); $year = intval(date('Y')) + 543;
 } elseif ($filter_type === 'year') {
-    $day = 0; $month = 0; $year = intval(date('Y')) + 543;
+    $day = 0; $day2 = 0; $month = 0; $year = intval(date('Y')) + 543;
 } else {
     $day   = isset($_GET['day'])   ? intval($_GET['day'])   : 0;
+    $day2  = isset($_GET['day2'])  ? intval($_GET['day2'])  : 0;
     $month = isset($_GET['month']) ? intval($_GET['month']) : 0;
     $year  = isset($_GET['year'])  ? intval($_GET['year'])  : (date('Y') + 543);
 }
@@ -35,18 +45,49 @@ $months_th = [
     9=>'กันยายน',10=>'ตุลาคม',11=>'พฤศจิกายน',12=>'ธันวาคม'
 ];
 
-if ($day > 0 || $month > 0 || $year > 0) {
+if ($day > 0 || $month > 0 || $year > 0 || !empty($q)) {
     try {
-        $conditions = ["p.id_branch = :id_branch", "p.serv_2 != 0", "p.pay_status = 2"];
-        $params = [':id_branch' => $id_branch];
+        // Condition: Exclude cancelled bills (pay_status = 3) and must have inspection fee or inspection number
+        $conditions = [
+            "p.pay_status != 3",
+            "(p.serv_2 > 0 OR (p.serv_2_1 IS NOT NULL AND TRIM(p.serv_2_1) != ''))"
+        ];
+        $params = [];
 
-        if ($day   > 0) { $conditions[] = "p.pay_day = :day";     $params[':day']   = $day; }
-        if ($month > 0) { $conditions[] = "p.pay_month = :month"; $params[':month'] = $month; }
-        if ($year  > 0) { $conditions[] = "p.pay_year = :year";   $params[':year']  = $year - 543; }
+        if ($id_branch > 0) {
+            $conditions[] = "p.id_branch = :id_branch";
+            $params[':id_branch'] = $id_branch;
+        }
+
+        if ($day > 0 && $day2 == 0) {
+            $conditions[] = "p.pay_day = :day";
+            $params[':day'] = $day;
+        } elseif ($day > 0 && $day2 > 0) {
+            $conditions[] = "p.pay_day >= :day AND p.pay_day <= :day2";
+            $params[':day'] = $day;
+            $params[':day2'] = $day2;
+        }
+
+        if ($month > 0) {
+            $conditions[] = "p.pay_month = :month";
+            $params[':month'] = $month;
+        }
+
+        if ($year > 0) {
+            $conditions[] = "p.pay_year = :year";
+            $params[':year'] = $year - 543;
+        }
+
+        if (!empty($q)) {
+            $conditions[] = "(p.cus_name LIKE :search_q1 OR p.car_regis_id LIKE :search_q2 OR p.serv_2_1 LIKE :search_q3)";
+            $params[':search_q1'] = '%' . $q . '%';
+            $params[':search_q2'] = '%' . $q . '%';
+            $params[':search_q3'] = '%' . $q . '%';
+        }
 
         $where_sql = implode(" AND ", $conditions);
 
-        // Count
+        // Count total records
         $sc = $pdo->prepare("SELECT COUNT(*) FROM `payment` p WHERE $where_sql");
         $sc->execute($params);
         $total_records = intval($sc->fetchColumn());
@@ -57,13 +98,18 @@ if ($day > 0 || $month > 0 || $year > 0) {
         if ($total_pages > 0 && $page > $total_pages) $page = $total_pages;
         $offset = ($page - 1) * $limit;
 
-        // Detail rows
-        $stmt = $pdo->prepare("SELECT p.cus_name, p.car_regis_id, p.pay_day, p.pay_month, p.pay_year,
-                                      c.car_type_name, pr.PROVINCE_NAME, p.serv_2_1
+        // Detail rows with LEFT JOIN to prevent dropping rows with missing province/cartype
+        $stmt = $pdo->prepare("SELECT p.id_pay, p.cus_name, p.car_regis_id, p.pay_day, p.pay_month, p.pay_year, p.pay_time,
+                                      p.serv_2, p.serv_2_1, p.pay_status, p.id_branch,
+                                      COALESCE(c.car_type_name, 'ไม่ระบุ') AS car_type_name,
+                                      COALESCE(pr.PROVINCE_NAME, 'ไม่ระบุ') AS PROVINCE_NAME,
+                                      b.branch_name
                                FROM `payment` p
-                               JOIN `car_type` c  ON p.id_car_type = c.id_car_type
-                               JOIN `province` pr ON p.province_id  = pr.PROVINCE_ID
-                               WHERE $where_sql ORDER BY p.id_pay DESC
+                               LEFT JOIN `car_type` c  ON p.id_car_type = c.id_car_type
+                               LEFT JOIN `province` pr ON p.province_id = pr.PROVINCE_ID
+                               LEFT JOIN `branch` b    ON p.id_branch = b.id_branch
+                               WHERE $where_sql
+                               ORDER BY p.id_pay DESC
                                LIMIT :limit OFFSET :offset");
         foreach ($params as $k => $v) $stmt->bindValue($k, $v);
         $stmt->bindValue(':limit',  $limit,  PDO::PARAM_INT);
@@ -72,16 +118,23 @@ if ($day > 0 || $month > 0 || $year > 0) {
         $inspections = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Car type summary
-        $sc2 = $pdo->prepare("SELECT c.car_type_name, COUNT(*) as cnt
-                               FROM `payment` p JOIN `car_type` c ON p.id_car_type = c.id_car_type
-                               WHERE $where_sql GROUP BY c.id_car_type ORDER BY cnt DESC");
+        $sc2 = $pdo->prepare("SELECT COALESCE(c.car_type_name, 'ไม่ระบุ') AS car_type_name, COUNT(*) as cnt
+                               FROM `payment` p
+                               LEFT JOIN `car_type` c ON p.id_car_type = c.id_car_type
+                               WHERE $where_sql
+                               GROUP BY p.id_car_type, c.car_type_name
+                               ORDER BY cnt DESC");
         $sc2->execute($params);
         $car_type_summary = $sc2->fetchAll(PDO::FETCH_ASSOC);
 
         // Province summary
-        $sc3 = $pdo->prepare("SELECT pr.PROVINCE_NAME, COUNT(*) as cnt
-                               FROM `payment` p JOIN `province` pr ON p.province_id = pr.PROVINCE_ID
-                               WHERE $where_sql GROUP BY p.province_id ORDER BY cnt DESC LIMIT 15");
+        $sc3 = $pdo->prepare("SELECT COALESCE(pr.PROVINCE_NAME, 'ไม่ระบุ') AS PROVINCE_NAME, COUNT(*) as cnt
+                               FROM `payment` p
+                               LEFT JOIN `province` pr ON p.province_id = pr.PROVINCE_ID
+                               WHERE $where_sql
+                               GROUP BY p.province_id, pr.PROVINCE_NAME
+                               ORDER BY cnt DESC
+                               LIMIT 15");
         $sc3->execute($params);
         $province_summary = $sc3->fetchAll(PDO::FETCH_ASSOC);
 
@@ -89,17 +142,23 @@ if ($day > 0 || $month > 0 || $year > 0) {
 }
 
 // Period label
-function period_label($ft, $day, $month, $year, $months_th) {
+function period_label($ft, $day, $day2, $month, $year, $months_th) {
     if ($ft === 'today') return 'วันที่ ' . date('d') . ' ' . $months_th[intval(date('m'))] . ' ' . (date('Y') + 543);
     if ($ft === 'month') return 'เดือน ' . $months_th[intval(date('m'))] . ' ' . (date('Y') + 543);
     if ($ft === 'year')  return 'ปี ' . (date('Y') + 543);
     $p = [];
-    if ($day > 0)   $p[] = 'วันที่ ' . $day;
-    if ($month > 0) $p[] = $months_th[$month];
-    if ($year > 0)  $p[] = $year;
+    if ($day > 0) {
+        if ($day2 > 0) {
+            $p[] = 'วันที่ ' . $day . ' - ' . $day2;
+        } else {
+            $p[] = 'วันที่ ' . $day;
+        }
+    }
+    if ($month > 0) $p[] = 'เดือน ' . $months_th[$month];
+    if ($year > 0)  $p[] = 'ปี ' . $year;
     return implode(' ', $p) ?: 'ทุกช่วงเวลา';
 }
-$period_label = period_label($filter_type, $day, $month, $year, $months_th);
+$period_label = period_label($filter_type, $day, $day2, $month, $year, $months_th);
 
 $max_car  = !empty($car_type_summary)  ? max(array_column($car_type_summary,  'cnt')) : 1;
 $max_prov = !empty($province_summary)  ? max(array_column($province_summary,   'cnt')) : 1;
@@ -138,6 +197,19 @@ $max_prov = !empty($province_summary)  ? max(array_column($province_summary,   '
 }
 .filter-tab:hover  { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
 .filter-tab.active { background: var(--primary); border-color: var(--primary); color: var(--text-inverse); }
+
+.search-row {
+    display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem;
+}
+.search-input-wrap {
+    flex: 1; min-width: 240px; position: relative;
+}
+.search-input-wrap input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-md);
+    padding: 0.55rem 0.85rem; font-size: 0.9rem; background: var(--bg-card); color: var(--text-main);
+    outline: none; transition: var(--transition);
+}
+.search-input-wrap input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
 
 .custom-fields {
     display: flex; flex-wrap: wrap; gap: 0.85rem; align-items: flex-end;
@@ -288,24 +360,47 @@ $max_prov = !empty($province_summary)  ? max(array_column($province_summary,   '
 
             <!-- ── Filter Bar ── -->
             <div class="filter-bar">
-                <div class="filter-bar-title">🔍 เลือกช่วงเวลา</div>
+                <div class="filter-bar-title">🔍 ตัวกรองและค้นหาข้อมูล</div>
                 <form action="car_list.php" method="GET" id="filterForm">
                     <input type="hidden" name="search_active" value="1">
                     <input type="hidden" name="filter_type" id="filter_type_input" value="<?php echo htmlspecialchars($filter_type); ?>">
+
+                    <div class="search-row">
+                        <div class="search-input-wrap">
+                            <input type="text" name="q" placeholder="พิมพ์ค้นหา: ทะเบียนรถ, ชื่อลูกค้า, หรือเลขที่ ตรอ. ..." value="<?php echo htmlspecialchars($q); ?>">
+                        </div>
+                        <?php if ($is_manager): ?>
+                        <div class="modern-fg" style="margin-bottom:0;">
+                            <select name="id_branch" onchange="document.getElementById('filterForm').submit()">
+                                <option value="0" <?php echo $id_branch === 0 ? 'selected' : ''; ?>>— ทุกสาขา —</option>
+                                <option value="1" <?php echo $id_branch === 1 ? 'selected' : ''; ?>>บวรเซอร์วิสดอกคำใต้</option>
+                                <option value="2" <?php echo $id_branch === 2 ? 'selected' : ''; ?>>บวรเซอร์วิสท่าวังทอง</option>
+                            </select>
+                        </div>
+                        <?php endif; ?>
+                        <button type="submit" class="btn btn-primary" style="padding:0.55rem 1.25rem;">🔍 ค้นหา</button>
+                    </div>
 
                     <div class="filter-tabs">
                         <button type="button" class="filter-tab <?php echo $filter_type==='today'  ? 'active':''; ?>" onclick="setFilter('today')">📅 วันนี้</button>
                         <button type="button" class="filter-tab <?php echo $filter_type==='month'  ? 'active':''; ?>" onclick="setFilter('month')">📆 เดือนนี้</button>
                         <button type="button" class="filter-tab <?php echo $filter_type==='year'   ? 'active':''; ?>" onclick="setFilter('year')">🗓️ ปีนี้</button>
-                        <button type="button" class="filter-tab <?php echo $filter_type==='custom' ? 'active':''; ?>" onclick="setFilter('custom')">✏️ กำหนดเอง</button>
+                        <button type="button" class="filter-tab <?php echo $filter_type==='custom' ? 'active':''; ?>" onclick="setFilter('custom')">✏️ กำหนดช่วงวันที่</button>
                     </div>
 
                     <div id="customFields" style="display:<?php echo $filter_type==='custom' ? 'flex':'none'; ?>;" class="custom-fields">
                         <div class="modern-fg">
-                            <label>วันที่</label>
+                            <label>จากวันที่</label>
                             <select name="day">
                                 <option value="0">— วัน —</option>
                                 <?php for ($i=1;$i<=31;$i++) echo '<option value="'.$i.'"'.($day==$i?' selected':'').'>'.$i.'</option>'; ?>
+                            </select>
+                        </div>
+                        <div class="modern-fg">
+                            <label>ถึงวันที่</label>
+                            <select name="day2">
+                                <option value="0">— วัน (ตัวเลือก) —</option>
+                                <?php for ($i=1;$i<=31;$i++) echo '<option value="'.$i.'"'.($day2==$i?' selected':'').'>'.$i.'</option>'; ?>
                             </select>
                         </div>
                         <div class="modern-fg">
@@ -322,7 +417,7 @@ $max_prov = !empty($province_summary)  ? max(array_column($province_summary,   '
                                 <?php for ($y=date('Y')+543;$y>=2557;$y--) echo '<option value="'.$y.'"'.($year==$y?' selected':'').'>'.$y.'</option>'; ?>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="height:40px; padding:0 1.5rem; align-self:flex-end;">🔍 ค้นหา</button>
+                        <button type="submit" class="btn btn-primary" style="height:38px; padding:0 1.25rem; align-self:flex-end;">🔍 แสดงรายงาน</button>
                     </div>
                 </form>
             </div>
@@ -331,7 +426,10 @@ $max_prov = !empty($province_summary)  ? max(array_column($province_summary,   '
 
             <!-- ── Period banner + count ── -->
             <div class="period-banner">
-                <div class="period-label">📅 <?php echo $period_label; ?></div>
+                <div class="period-label">
+                    📅 <?php echo $period_label; ?>
+                    <?php if (!empty($q)): ?>&nbsp;|&nbsp; ค้นหา: "<strong><?php echo htmlspecialchars($q); ?></strong>"<?php endif; ?>
+                </div>
                 <span style="font-size:0.875rem; color:var(--text-muted);">
                     พบ <strong style="color:var(--text-main);"><?php echo number_format($total_records); ?></strong> รายการ
                     <?php if ($total_pages > 1): ?>&nbsp;·&nbsp; หน้า <?php echo $page; ?>/<?php echo $total_pages; ?><?php endif; ?>
@@ -343,7 +441,7 @@ $max_prov = !empty($province_summary)  ? max(array_column($province_summary,   '
                 <div class="metric-card">
                     <div class="metric-icon" style="background:#eff6ff;">🚗</div>
                     <div>
-                        <div class="metric-label">รายการตรวจสภาพ</div>
+                        <div class="metric-label">รายการตรวจสภาพ ตรอ.</div>
                         <div class="metric-value" style="color:#2563eb;"><?php echo number_format($total_records); ?> <span style="font-size:0.85rem; font-weight:500; color:var(--text-muted);">คัน</span></div>
                     </div>
                 </div>
@@ -390,6 +488,10 @@ $max_prov = !empty($province_summary)  ? max(array_column($province_summary,   '
                                 <th>ประเภทรถ</th>
                                 <th class="center" style="width:80px;">วันที่</th>
                                 <th class="center">เลขที่ ตรอ.</th>
+                                <?php if ($is_manager && $id_branch === 0): ?>
+                                    <th class="center">สาขา</th>
+                                <?php endif; ?>
+                                <th class="center" style="width:90px;">สถานะบิล</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -408,6 +510,16 @@ $max_prov = !empty($province_summary)  ? max(array_column($province_summary,   '
                                         <span class="tro-badge"><?php echo htmlspecialchars($ins['serv_2_1']); ?></span>
                                     <?php else: ?>
                                         <span style="color:var(--text-muted); font-size:0.8rem;">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <?php if ($is_manager && $id_branch === 0): ?>
+                                    <td class="center" style="font-size:0.8rem;"><?php echo htmlspecialchars($ins['branch_name']); ?></td>
+                                <?php endif; ?>
+                                <td class="center">
+                                    <?php if ($ins['pay_status'] == 2): ?>
+                                        <span class="badge badge-success" style="font-size:0.75rem; padding:2px 6px;">พิมพ์แล้ว</span>
+                                    <?php elseif ($ins['pay_status'] == 1): ?>
+                                        <span class="badge badge-warning" style="font-size:0.75rem; padding:2px 6px;">รอพิมพ์</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -485,7 +597,7 @@ $max_prov = !empty($province_summary)  ? max(array_column($province_summary,   '
             <div class="empty-state card">
                 <div class="icon">🚘</div>
                 <p>ไม่พบข้อมูลการตรวจสภาพรถ ตรอ. ในช่วงเวลาที่เลือก</p>
-                <p style="font-size:0.875rem; margin-top:0.5rem; color:var(--text-muted);">ลองเปลี่ยนช่วงเวลาการค้นหา</p>
+                <p style="font-size:0.875rem; margin-top:0.5rem; color:var(--text-muted);">ลองเปลี่ยนช่วงเวลาหรือคำค้นหา</p>
             </div>
             <?php endif; ?>
 
