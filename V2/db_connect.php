@@ -230,6 +230,30 @@ try {
       PRIMARY KEY (`id_expense`),
       KEY `idx_branch_date` (`id_branch`, `expense_date`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Sales audit log table for anti-fraud tracking
+    $pdo->query("CREATE TABLE IF NOT EXISTS `payment_log` (
+      `id_log` int(11) NOT NULL AUTO_INCREMENT,
+      `id_pay` int(10) NOT NULL,
+      `id_emp` mediumint(5) NOT NULL,
+      `emp_name` varchar(100) NOT NULL,
+      `id_branch` tinyint(1) NOT NULL,
+      `action` varchar(30) NOT NULL,
+      `action_label` varchar(100) NOT NULL,
+      `reason` varchar(255) DEFAULT '',
+      `changes_summary` text DEFAULT NULL,
+      `old_data` mediumtext DEFAULT NULL,
+      `new_data` mediumtext DEFAULT NULL,
+      `ip_address` varchar(45) DEFAULT NULL,
+      `user_agent` varchar(255) DEFAULT NULL,
+      `created_at` datetime NOT NULL,
+      PRIMARY KEY (`id_log`),
+      KEY `idx_pay_log_id_pay` (`id_pay`),
+      KEY `idx_pay_log_action` (`action`),
+      KEY `idx_pay_log_branch` (`id_branch`),
+      KEY `idx_pay_log_created_at` (`created_at`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
 } catch (\PDOException $e) {
     // Fail silently to prevent interrupting user actions if DB permissions restrict DDL
 }
@@ -247,3 +271,134 @@ function get_system_setting($key, $default = '') {
     }
 }
 ?>
+
+/**
+ * Log payment activity for anti-fraud and audit tracking
+ * 
+ * @param PDO $pdo
+ * @param int $id_pay
+ * @param string $action ('CREATE', 'EDIT', 'PRINT', 'REPRINT', 'CANCEL')
+ * @param string $reason
+ * @param array|null $old_data
+ * @param array|null $new_data
+ * @param string $custom_summary
+ * @return bool
+ */
+function log_payment_activity($pdo, $id_pay, $action, $reason = '', $old_data = null, $new_data = null, $custom_summary = '') {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    $id_emp = isset($_SESSION['id_emp']) ? intval($_SESSION['id_emp']) : 0;
+    $emp_name = isset($_SESSION['name']) ? $_SESSION['name'] : 'พนักงาน/ระบบ';
+    $id_branch = isset($_SESSION['id_branch']) ? intval($_SESSION['id_branch']) : 1;
+    
+    if ($id_branch === 0 && !empty($old_data['id_branch'])) {
+        $id_branch = intval($old_data['id_branch']);
+    } elseif ($id_branch === 0 && !empty($new_data['id_branch'])) {
+        $id_branch = intval($new_data['id_branch']);
+    }
+    
+    $action_labels = array(
+        'CREATE'  => 'สร้างบิลใหม่',
+        'EDIT'    => 'แก้ไขข้อมูลบิล',
+        'PRINT'   => 'พิมพ์ใบเสร็จ (ครั้งแรก)',
+        'REPRINT' => 'พิมพ์ใบเสร็จซ้ำ',
+        'CANCEL'  => 'ยกเลิกใบเสร็จ'
+    );
+    $action_label = isset($action_labels[$action]) ? $action_labels[$action] : $action;
+
+    $changes_summary = $custom_summary;
+    if ($action === 'EDIT' && is_array($old_data) && is_array($new_data) && empty($changes_summary)) {
+        $diffs = array();
+        $fields_map = array(
+            'cus_name'     => 'ชื่อลูกค้า',
+            'cus_phone'    => 'เบอร์โทร',
+            'cus_addr'     => 'ที่อยู่',
+            'car_regis_id' => 'ทะเบียนรถ',
+            'id_car_type'  => 'ประเภทรถ',
+            'province_id'  => 'จังหวัด',
+            'serv_1'       => 'พ.ร.บ.',
+            'serv_2'       => 'ตรวจสภาพ (ตรอ.)',
+            'serv_2_1'     => 'เลขที่ ตรอ.',
+            'serv_3'       => 'ฝากต่อภาษี',
+            'serv_4'       => 'บริการ 4',
+            'serv_4_1'     => 'ประเภทบริการ 4',
+            'serv_4_2'     => 'รายละเอียดบริการ 4',
+            'serv_5'       => 'บริการ 5',
+            'serv_6'       => 'ประกันภัย',
+            'serv_7'       => 'บริการ 7',
+            'serv_7_1'     => 'รายละเอียดบริการ 7',
+            'discount'     => 'ส่วนลด',
+            'pay_sum'      => 'ยอดรวมก่อนลด',
+            'pay_total'    => 'ยอดชำระสุทธิ',
+            'pay_type'     => 'วิธีชำระเงิน',
+            'pay_cash'     => 'เงินสด',
+            'pay_transfer' => 'เงินโอน'
+        );
+
+        $num_fields = array('serv_1', 'serv_2', 'serv_3', 'serv_4', 'serv_5', 'serv_6', 'serv_7', 'discount', 'pay_sum', 'pay_total', 'pay_cash', 'pay_transfer');
+        foreach ($fields_map as $f => $lbl) {
+            $ov = isset($old_data[$f]) ? $old_data[$f] : null;
+            $nv = isset($new_data[$f]) ? $new_data[$f] : null;
+            if (in_array($f, $num_fields)) {
+                $of = floatval($ov);
+                $nf = floatval($nv);
+                if (abs($of - $nf) > 0.001) {
+                    $diffs[] = $lbl . ": " . number_format($of, 2) . " ➔ " . number_format($nf, 2) . " บ.";
+                }
+            } elseif ($f === 'pay_type') {
+                $pts = array(1 => 'เงินสด', 2 => 'เงินโอน', 3 => 'ผสม (สด+โอน)');
+                if ($ov != $nv) {
+                    $diffs[] = $lbl . ": " . (isset($pts[$ov]) ? $pts[$ov] : $ov) . " ➔ " . (isset($pts[$nv]) ? $pts[$nv] : $nv);
+                }
+            } else {
+                if (trim((string)$ov) !== trim((string)$nv)) {
+                    $diffs[] = $lbl . ": '" . (string)$ov . "' ➔ '" . (string)$nv . "'";
+                }
+            }
+        }
+        $changes_summary = !empty($diffs) ? implode(" | ", $diffs) : 'ไม่มีการแก้ไขข้อมูลในฟิลด์สำคัญ';
+    }
+
+    $ip = '';
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+    } elseif (!empty($_SERVER['REMOTE_ADDR'])) {
+        $ip = $_SERVER['REMOTE_ADDR'];
+    }
+    $ip = substr($ip, 0, 45);
+    $ua = isset($_SERVER['HTTP_USER_AGENT']) ? substr($_SERVER['HTTP_USER_AGENT'], 0, 255) : '';
+    $now = date('Y-m-d H:i:s');
+
+    $old_json = is_array($old_data) ? json_encode($old_data, 256) : null;
+    $new_json = is_array($new_data) ? json_encode($new_data, 256) : null;
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO `payment_log` (
+            `id_pay`, `id_emp`, `emp_name`, `id_branch`, `action`, `action_label`,
+            `reason`, `changes_summary`, `old_data`, `new_data`, `ip_address`, `user_agent`, `created_at`
+        ) VALUES (
+            :id_pay, :id_emp, :emp_name, :id_branch, :action, :action_label,
+            :reason, :changes_summary, :old_data, :new_data, :ip_address, :user_agent, :created_at
+        )");
+        return $stmt->execute(array(
+            ':id_pay'          => $id_pay,
+            ':id_emp'          => $id_emp,
+            ':emp_name'        => $emp_name,
+            ':id_branch'       => $id_branch,
+            ':action'          => $action,
+            ':action_label'    => $action_label,
+            ':reason'          => $reason,
+            ':changes_summary' => $changes_summary,
+            ':old_data'        => $old_json,
+            ':new_data'        => $new_json,
+            ':ip_address'      => $ip,
+            ':user_agent'      => $ua,
+            ':created_at'      => $now
+        ));
+    } catch (\PDOException $e) {
+        error_log("Failed to insert payment_log: " . $e->getMessage());
+        return false;
+    }
+}

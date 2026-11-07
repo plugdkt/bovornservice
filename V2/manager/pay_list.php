@@ -948,13 +948,10 @@ if ($is_daily) {
                                                 <?php echo $p['pay_day'] . '/' . $p['pay_month'] . '/' . ($p['pay_year'] + 543) . ' ' . substr($p['pay_time'], 0, 5) . ' น.'; ?>
                                             </td>
                                             <td class="text-center no-print" style="display: flex; gap: 0.35rem; justify-content: center; align-items: center;">
-                                                <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 11px;" onclick="showDetails(<?php echo $p['id_pay']; ?>)">ตรวจสอบ</button>
+                                                <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 7px; font-size: 11px;" onclick="showDetails(<?php echo $p['id_pay']; ?>)">ตรวจสอบ</button>
+                                                <button type="button" class="btn btn-sm" style="padding: 2px 7px; font-size: 11px; background: #f8fafc; border: 1px solid #cbd5e1; color: #475569;" onclick="viewBillTimeline(<?php echo $p['id_pay']; ?>)" title="ดูประวัติการแก้ไขและไทม์ไลน์">📜 ประวัติ</button>
                                                 <?php if (!$is_cancelled): ?>
-                                                    <form method="POST" action="cancel_receipt.php" style="display:inline;" onsubmit="return confirm('กรุณายืนยันการยกเลิกใบเสร็จนี้อีกครั้ง !!!');">
-                                                        <?php echo csrf_field(); ?>
-                                                        <input type="hidden" name="id_pay" value="<?php echo $p['id_pay']; ?>">
-                                                        <button type="submit" class="btn btn-danger btn-sm" style="padding: 2px 8px; font-size: 11px;">ยกเลิก</button>
-                                                    </form>
+                                                    <button type="button" class="btn btn-danger btn-sm" style="padding: 2px 7px; font-size: 11px;" onclick="openCancelModal(<?php echo $p['id_pay']; ?>, '<?php echo htmlspecialchars(isset($p['cus_name']) ? $p['cus_name'] : '', ENT_QUOTES); ?>', <?php echo floatval($p['pay_total']); ?>)">ยกเลิก</button>
                                                 <?php else: ?>
                                                     <span class="badge" style="background-color: #ef4444; color: #fff; font-size: 10px; padding: 3px 6px; font-weight: 600; opacity: 0.85; cursor: not-allowed;">ยกเลิกแล้ว</span>
                                                 <?php endif; ?>
@@ -1023,6 +1020,57 @@ if ($is_daily) {
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Reason Modal -->
+    <div class="modal-overlay" id="cancelConfirmModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
+        <div style="background: #ffffff; border-radius: 12px; width: 100%; max-width: 480px; padding: 1.5rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-top: 5px solid #ef4444;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: #dc2626; margin-top: 0; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>⚠️</span> ยืนยันการยกเลิกใบเสร็จรับเงิน
+            </h3>
+            <p style="font-size: 0.88rem; color: #475569; line-height: 1.5; margin-bottom: 1rem;">
+                คุณกำลังจะยกเลิกใบเสร็จเลขที่ <strong id="cancelModalBillNo" style="color: #dc2626;"></strong><br>
+                ลูกค้า: <span id="cancelModalCusName" style="font-weight: 600;"></span> | ยอดเงิน: <span id="cancelModalAmount" style="font-weight: 700; color: #dc2626;"></span> บาท
+            </p>
+            <form method="POST" action="cancel_receipt.php" id="cancelForm">
+                <?php echo csrf_field(); ?>
+                <input type="hidden" name="id_pay" id="cancelFormIdPay" value="">
+                <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
+                <div style="margin-bottom: 1.25rem;">
+                    <label for="cancel_reason" style="display: block; font-size: 0.85rem; font-weight: 600; color: #1e293b; margin-bottom: 0.35rem;">
+                        ระบุเหตุผลในการยกเลิกบิล (จำเป็น) <span style="color: #dc2626;">*</span>
+                    </label>
+                    <textarea name="cancel_reason" id="cancel_reason" required rows="3" class="form-control"
+                        placeholder="เช่น ลูกค้าขอยกเลิกบริการ, พิมพ์รายการผิดพลาด, ออกบิลใหม่แทนที่"
+                        style="width: 100%; padding: 0.6rem; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;"></textarea>
+                    <small style="color: #64748b; font-size: 0.75rem; margin-top: 0.25rem; display: block;">
+                        * ข้อมูลการยกเลิกและเหตุผลจะถูกบันทึกลงในระบบตรวจสอบประวัติ (Audit Log) อย่างถาวร
+                    </small>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeCancelModal()">ไม่ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger" style="background: #dc2626; border-color: #dc2626;">ยืนยันการยกเลิก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bill Timeline Modal -->
+    <div class="modal-overlay" id="timelineModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
+        <div style="background: #ffffff; border-radius: 12px; width: 100%; max-width: 650px; max-height: 90vh; overflow-y: auto; padding: 1.5rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin: 0;">
+                    📜 ประวัติและไทม์ไลน์ของบิล <span id="timelineBillNo" style="color: var(--primary);"></span>
+                </h3>
+                <button type="button" onclick="closeTimeline()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8;">&times;</button>
+            </div>
+            <div id="timelineItemsContainer" style="margin: 1rem 0;">
+                กำลังโหลดข้อมูล...
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeTimeline()">ปิดหน้าต่าง</button>
             </div>
         </div>
     </div>
@@ -1143,6 +1191,66 @@ if ($is_daily) {
 
         function openTaxReferralPopup(url) {
             window.open(url, 'tax_referral_popup', 'width=980,height=850,scrollbars=yes,resizable=yes');
+        }
+
+        function openCancelModal(idPay, cusName, amount) {
+            document.getElementById('cancelFormIdPay').value = idPay;
+            document.getElementById('cancelModalBillNo').innerText = '#' + idPay;
+            document.getElementById('cancelModalCusName').innerText = cusName || '-';
+            document.getElementById('cancelModalAmount').innerText = Number(amount).toLocaleString('th-TH', {minimumFractionDigits: 2});
+            document.getElementById('cancel_reason').value = '';
+            document.getElementById('cancelConfirmModal').style.display = 'flex';
+        }
+
+        function closeCancelModal() {
+            document.getElementById('cancelConfirmModal').style.display = 'none';
+        }
+
+        function viewBillTimeline(idPay) {
+            document.getElementById('timelineBillNo').innerText = '#' + idPay;
+            document.getElementById('timelineModal').style.display = 'flex';
+            document.getElementById('timelineItemsContainer').innerHTML = 'กำลังโหลดประวัติ...';
+
+            fetch('audit_log.php?ajax_timeline=1&id_pay=' + idPay)
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (!data.success) {
+                        document.getElementById('timelineItemsContainer').innerHTML = '<div style="color:red;">' + (data.message || 'เกิดข้อผิดพลาด') + '</div>';
+                        return;
+                    }
+                    if (!data.logs || data.logs.length === 0) {
+                        document.getElementById('timelineItemsContainer').innerHTML = '<div style="color:#64748b; padding:1.5rem; text-align:center;">ยังไม่มีประวัติการบันทึกสำหรับบิลนี้</div>';
+                        return;
+                    }
+                    var html = '<div style="display:flex; flex-direction:column; gap:0.75rem;">';
+                    data.logs.forEach(function(item) {
+                        var color = '#047857';
+                        var bg = '#ecfdf5';
+                        if (item.action === 'EDIT') { color = '#b45309'; bg = '#fffbeb'; }
+                        else if (item.action === 'CANCEL') { color = '#b91c1c'; bg = '#fef2f2'; }
+                        else if (item.action === 'REPRINT') { color = '#6d28d9'; bg = '#f5f3ff'; }
+                        else if (item.action === 'PRINT') { color = '#1d4ed8'; bg = '#eff6ff'; }
+
+                        html += '<div style="border:1px solid #e2e8f0; border-left:4px solid ' + color + '; border-radius:8px; padding:0.75rem 1rem; background:#ffffff;">' +
+                            '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">' +
+                                '<span style="background:' + bg + '; color:' + color + '; padding:2px 8px; border-radius:4px; font-weight:700; font-size:0.75rem;">' + item.action_label + '</span>' +
+                                '<span style="font-size:0.75rem; color:#94a3b8;">' + item.created_at + '</span>' +
+                            '</div>' +
+                            '<div style="font-size:0.85rem; font-weight:600; color:#1e293b;">ผู้ทำรายการ: ' + item.emp_name + (item.branch_name ? ' (' + item.branch_name + ')' : '') + '</div>' +
+                            '<div style="font-size:0.83rem; color:#334155; margin-top:0.25rem; line-height:1.4;">' + item.changes_summary + '</div>' +
+                            (item.reason ? '<div style="margin-top:0.35rem; font-size:0.8rem; color:#b45309; background:#fffbeb; padding:3px 6px; border-radius:4px;">เหตุผล: ' + item.reason + '</div>' : '') +
+                        '</div>';
+                    });
+                    html += '</div>';
+                    document.getElementById('timelineItemsContainer').innerHTML = html;
+                })
+                .catch(function(err) {
+                    document.getElementById('timelineItemsContainer').innerHTML = '<div style="color:red;">โหลดข้อมูลไม่สำเร็จ: ' + err + '</div>';
+                });
+        }
+
+        function closeTimeline() {
+            document.getElementById('timelineModal').style.display = 'none';
         }
 
         // Store payments displayed on the current page for details lookup

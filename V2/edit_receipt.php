@@ -140,6 +140,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':id_pay'     => $id_pay
         ]);
         
+        $edit_reason = isset($_POST['edit_reason']) ? trim($_POST['edit_reason']) : '';
+        if (empty($edit_reason)) {
+            $edit_reason = 'แก้ไขรายละเอียดรายการขาย';
+        }
+
+        $stmt_new = $pdo->prepare("SELECT * FROM `payment` WHERE `id_pay` = :id_pay");
+        $stmt_new->execute(array(':id_pay' => $id_pay));
+        $new_data = $stmt_new->fetch();
+
+        if (function_exists('log_payment_activity')) {
+            log_payment_activity($pdo, $id_pay, 'EDIT', $edit_reason, $pay, $new_data);
+        }
+
         $_SESSION['last_pay_id'] = $id_pay;
         header("Location: billing.php");
         exit;
@@ -587,6 +600,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                                 <div id="mixed_warn" style="display:none; font-size:0.82rem; color:var(--danger); font-weight:600; width:100%; margin-top:0.25rem;"></div>
                             </div>
+                        </div>
+
+                        <!-- Audit Log Reason Field -->
+                        <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-left: 4px solid #f59e0b; padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                            <label for="edit_reason" style="display: block; font-weight: 700; color: #92400e; font-size: 0.95rem; margin-bottom: 0.35rem;">
+                                🛡️ เหตุผลในการแก้ไขบิล (จำเป็นต้องระบุ เพื่อบันทึกประวัติการตรวจสอบป้องกันการทุจริต) <span style="color: #dc2626;">*</span>
+                            </label>
+                            <input type="text" name="edit_reason" id="edit_reason" required
+                                placeholder="เช่น แก้ไขชื่อลูกค้า, ลูกค้าขอเพิ่มรายการตรวจสภาพ, แก้ไขยอดเงินชำระ"
+                                style="width: 100%; border: 1.5px solid #d97706; border-radius: 6px; padding: 0.65rem 0.85rem; font-size: 0.95rem; background: #ffffff; color: #1e293b;">
+                            <small style="color: #b45309; font-size: 0.8rem; margin-top: 0.25rem; display: block;">
+                                * ทุกการแก้ไขจะถูกบันทึกประวัติ ผู้แก้ไข วันเวลา ยอดเดิม และยอดใหม่ลงระบบผู้จัดการทันที
+                            </small>
                         </div>
 
                         <!-- Modern Action Buttons -->

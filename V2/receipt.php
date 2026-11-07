@@ -69,6 +69,10 @@ try {
         } else {
             // Manager reprint permitted with audit watermark
             $is_reprint = true;
+            if (function_exists('log_payment_activity')) {
+                $mgr_name = isset($_SESSION['name']) ? $_SESSION['name'] : 'ผู้จัดการ';
+                log_payment_activity($pdo, $id_pay, 'REPRINT', 'ผู้จัดการสั่งพิมพ์ใบเสร็จซ้ำ', $pay, null, 'ผู้จัดการ (' . $mgr_name . ') สั่งเปิด/พิมพ์ใบเสร็จซ้ำ');
+            }
         }
     } else {
         // First and only print: transition from draft (1) to completed/printed (2)
@@ -76,6 +80,9 @@ try {
             $pdo->prepare("UPDATE `payment` SET `pay_status` = 2 WHERE `id_pay` = :id_pay")
                 ->execute([':id_pay' => $id_pay]);
             $pay['pay_status'] = 2;
+            if (function_exists('log_payment_activity')) {
+                log_payment_activity($pdo, $id_pay, 'PRINT', 'สั่งพิมพ์และปิดบิลสมบูรณ์', null, null, 'สั่งพิมพ์ใบเสร็จครั้งแรกและปิดบิล (สถานะเปลี่ยนเป็นพิมพ์แล้ว)');
+            }
         }
     }
 } catch (\PDOException $e) {

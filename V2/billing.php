@@ -134,6 +134,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_id = $pdo->lastInsertId();
         $_SESSION['last_pay_id'] = $new_id;
         
+        if (function_exists('log_payment_activity')) {
+            $created_info = array(
+                'id_pay' => $new_id,
+                'cus_name' => $name_cus,
+                'cus_phone' => $phone_cus,
+                'car_regis_id' => $car_regis_id,
+                'serv_1' => $serv_1,
+                'serv_2' => $serv_2,
+                'serv_2_1' => $serv_2_1,
+                'serv_3' => $serv_3,
+                'serv_4' => $serv_4,
+                'serv_5' => $serv_5,
+                'serv_6' => $serv_6,
+                'serv_7' => $serv_7,
+                'pay_sum' => $pay_sum,
+                'discount' => $discount,
+                'pay_total' => $pay_total,
+                'pay_type' => $pay_type,
+                'pay_cash' => $pay_cash,
+                'pay_transfer' => $pay_transfer,
+                'id_branch' => $id_branch
+            );
+            $pay_type_str = ($pay_type == 1) ? 'เงินสด' : (($pay_type == 2) ? 'เงินโอน' : 'ผสม (สด+โอน)');
+            $summary = "สร้างบิล: " . $name_cus . " (" . $car_regis_id . ") ยอดสุทธิ " . number_format($pay_total, 2) . " บ. [" . $pay_type_str . "]";
+            log_payment_activity($pdo, $new_id, 'CREATE', 'สร้างบิลใหม่จากหน้าขาย', null, $created_info, $summary);
+        }
+        
         header("Location: billing.php");
         exit;
         

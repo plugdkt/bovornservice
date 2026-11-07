@@ -45,6 +45,11 @@ $initials = mb_substr($initials, 0, 2, 'UTF-8');
                     <span>📊</span> รายงานการขาย
                 </a>
             </li>
+            <li class="sidebar-item <?php echo ($current_page === 'audit_log.php') ? 'active' : ''; ?>">
+                <a href="<?php echo $manager_prefix; ?>audit_log.php">
+                    <span>🛡️</span> ตรวจสอบประวัติการขาย
+                </a>
+            </li>
             <li class="sidebar-item <?php echo ($current_page === 'user_manager.php' || $current_page === 'add_emp.php' || $current_page === 'edit_emp.php') ? 'active' : ''; ?>">
                 <a href="<?php echo $manager_prefix; ?>user_manager.php">
                     <span>👥</span> จัดการพนักงาน

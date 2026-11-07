@@ -90,3 +90,27 @@ CREATE TABLE IF NOT EXISTS `payment` (
   CONSTRAINT `fk_pay_emp` FOREIGN KEY (`id_emp`) REFERENCES `employee` (`id_emp`) ON DELETE CASCADE,
   CONSTRAINT `fk_pay_province` FOREIGN KEY (`province_id`) REFERENCES `province` (`PROVINCE_ID`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- 7. Payment Audit Log (Sales history & anti-fraud)
+CREATE TABLE IF NOT EXISTS `payment_log` (
+  `id_log` int(11) NOT NULL AUTO_INCREMENT,
+  `id_pay` int(10) NOT NULL,
+  `id_emp` mediumint(5) NOT NULL,
+  `emp_name` varchar(100) NOT NULL,
+  `id_branch` tinyint(1) NOT NULL,
+  `action` varchar(30) NOT NULL, -- 'CREATE', 'EDIT', 'PRINT', 'REPRINT', 'CANCEL'
+  `action_label` varchar(100) NOT NULL,
+  `reason` varchar(255) DEFAULT '',
+  `changes_summary` text DEFAULT NULL,
+  `old_data` mediumtext DEFAULT NULL,
+  `new_data` mediumtext DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id_log`),
+  KEY `idx_pay_log_id_pay` (`id_pay`),
+  KEY `idx_pay_log_action` (`action`),
+  KEY `idx_pay_log_branch` (`id_branch`),
+  KEY `idx_pay_log_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
