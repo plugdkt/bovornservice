@@ -78,7 +78,20 @@ if (isset($_GET['ajax_diff'])) {
 }
 
 // ── Search Filters ─────────────────────────────────────────────────────────
-$filter_type = isset($_GET['filter_type']) ? $_GET['filter_type'] : 'today';
+$filter_type = isset($_GET['filter_type']) ? $_GET['filter_type'] : '';
+if (empty($filter_type)) {
+    try {
+        $today_cnt = (int)$pdo->query("SELECT COUNT(*) FROM `payment_log` WHERE DATE(`created_at`) = CURDATE()")->fetchColumn();
+        if ($today_cnt > 0) {
+            $filter_type = 'today';
+        } else {
+            $month_cnt = (int)$pdo->query("SELECT COUNT(*) FROM `payment_log` WHERE DATE_FORMAT(`created_at`, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')")->fetchColumn();
+            $filter_type = ($month_cnt > 0) ? 'month' : 'all';
+        }
+    } catch (\PDOException $e) {
+        $filter_type = 'month';
+    }
+}
 $branch_id   = isset($_GET['branch_id']) ? intval($_GET['branch_id']) : 0;
 $action_sel  = isset($_GET['action_sel']) ? trim($_GET['action_sel']) : 'ALL';
 $q           = isset($_GET['q']) ? trim($_GET['q']) : '';
@@ -487,7 +500,14 @@ $build_query = function($overrides = array()) {
                                     <tr>
                                         <td colspan="8" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
                                             <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
-                                            <div>ไม่พบประวัติการทำรายการตามเงื่อนไขที่เลือก</div>
+                                            <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-main); margin-bottom: 0.35rem;">ไม่พบประวัติการทำรายการตามเงื่อนไขที่เลือก</div>
+                                            <div style="font-size: 0.85rem; color: var(--text-muted); max-width: 500px; margin: 0 auto; line-height: 1.5;">
+                                                <?php if ($filter_type === 'today'): ?>
+                                                    ยังไม่มีการสร้างบิล แก้ไข หรือยกเลิกบิลในวันนี้ ท่านสามารถเปลี่ยนตัวกรองเป็น <strong>"เดือนนี้"</strong> หรือ <strong>"ทั้งหมด"</strong> เพื่อดูประวัติย้อนหลังได้ครับ
+                                                <?php else: ?>
+                                                    ระบบบันทึกประวัติ (Audit Log) จะบันทึกข้อมูลแบบเรียลไทม์อัตโนมัติเมื่อพนักงานสร้างบิล, แก้ไขบิล, พิมพ์ใบเสร็จ หรือยกเลิกบิล
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php else: ?>
