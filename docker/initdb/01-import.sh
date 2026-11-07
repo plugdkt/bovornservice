@@ -17,9 +17,17 @@ SQL
 echo "Importing legacy database (bovornserv_db)..."
 "${mysql[@]}" bovornserv_db < /dumps/bovornserv_db.sql
 
-# Prefer the newest V2 backup; fall back to the original dump
-V2_DUMP=/dumps/bovornserv_v2_db_before_upgrade_20261013.sql
-[ -f "$V2_DUMP" ] || V2_DUMP=/dumps/bovornserv_v2_db.sql
+# Prefer the newest V2 backup (November 2026); fall back to older dumps
+if [ -f "/dumps/bovornserv_v2.sql" ]; then
+    V2_DUMP=/dumps/bovornserv_v2.sql
+elif [ -f "/dumps/bovornserv_v2_server_20261105.sql" ]; then
+    V2_DUMP=/dumps/bovornserv_v2_server_20261105.sql
+elif [ -f "/dumps/bovornserv_v2_db_before_upgrade_20261013.sql" ]; then
+    V2_DUMP=/dumps/bovornserv_v2_db_before_upgrade_20261013.sql
+else
+    V2_DUMP=/dumps/bovornserv_v2_db.sql
+fi
+
 echo "Importing V2 database from $V2_DUMP..."
 "${mysql[@]}" bovornserv_v2_db < "$V2_DUMP"
 
