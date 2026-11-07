@@ -235,14 +235,6 @@ $build_query = function($overrides = array()) {
     <link rel="stylesheet" href="../style.css">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .audit-card {
-            background: var(--bg-card);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow-sm);
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
-        }
         .stat-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -251,11 +243,11 @@ $build_query = function($overrides = array()) {
         }
         .stat-box {
             background: var(--bg-card);
-            border-radius: 10px;
+            border-radius: var(--radius-lg);
             padding: 1.15rem 1.25rem;
             border: 1px solid var(--border);
             border-left: 4px solid var(--primary);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: var(--shadow-sm);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -331,262 +323,266 @@ $build_query = function($overrides = array()) {
     </style>
 </head>
 <body>
-    <div class="app-layout">
-        <?php include("sidebar.php"); ?>
+    <div class="app-container">
+        <!-- Sidebar Navigation Component -->
+        <?php include("../sidebar.php"); ?>
         
-        <main class="main-content">
+        <div class="main-wrapper">
             <!-- Header -->
-            <div class="page-header" style="margin-bottom: 1.5rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                    <div>
-                        <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <span>🛡️</span> ตรวจสอบประวัติการขายและป้องกันการทุจริต
-                        </h1>
-                        <p style="font-size: 0.88rem; color: var(--text-muted); margin: 0;">
-                            บันทึกประวัติการสร้างบิล การแก้ไขข้อมูล การพิมพ์ซ้ำ และการยกเลิกบิลทุกขั้นตอน เพื่อความโปร่งใสและตรวจสอบย้อนหลังได้ 100%
-                        </p>
+            <div class="header">
+                <div class="header-title">🛡️ ตรวจสอบประวัติการขายและป้องกันการทุจริต</div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="font-size: 0.875rem; color: var(--text-muted);">
+                        บทบาท: <strong style="color: var(--primary);">ผู้จัดการระบบ</strong>
                     </div>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <a href="pay_list.php" class="btn btn-secondary" style="font-size: 0.85rem;">📊 ไปหน้ารายงานการขาย</a>
-                    </div>
+                    <a href="pay_list.php" class="btn btn-secondary btn-sm" style="font-size: 0.82rem; padding: 4px 10px;">📊 หน้ารายงานการขาย</a>
                 </div>
             </div>
 
-            <!-- Stat Summary Cards -->
-            <div class="stat-grid">
-                <div class="stat-box">
-                    <div>
-                        <div class="stat-label">ประวัติการทำรายการทั้งหมด</div>
-                        <div class="stat-value"><?php echo number_format($total_logs); ?></div>
-                    </div>
-                    <div style="font-size: 2rem; opacity: 0.6;">📋</div>
-                </div>
-                <div class="stat-box stat-edit">
-                    <div>
-                        <div class="stat-label">รายการที่มีการแก้ไขข้อมูล</div>
-                        <div class="stat-value" style="color: #d97706;"><?php echo number_format($count_edit); ?></div>
-                    </div>
-                    <div style="font-size: 2rem; opacity: 0.8;">✏️</div>
-                </div>
-                <div class="stat-box stat-cancel">
-                    <div>
-                        <div class="stat-label">ใบเสร็จที่ถูกยกเลิก</div>
-                        <div class="stat-value" style="color: #dc2626;"><?php echo number_format($count_cancel); ?></div>
-                    </div>
-                    <div style="font-size: 2rem; opacity: 0.8;">🚫</div>
-                </div>
-                <div class="stat-box stat-reprint">
-                    <div>
-                        <div class="stat-label">ใบเสร็จที่มีการพิมพ์ซ้ำ</div>
-                        <div class="stat-value" style="color: #7c3aed;"><?php echo number_format($count_reprint); ?></div>
-                    </div>
-                    <div style="font-size: 2rem; opacity: 0.8;">🖨️</div>
-                </div>
-            </div>
+            <div class="content-body">
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: -0.5rem; margin-bottom: 1.25rem;">
+                    บันทึกประวัติการสร้างบิล การแก้ไขข้อมูล การพิมพ์ซ้ำ และการยกเลิกบิลทุกขั้นตอน เพื่อความโปร่งใสและตรวจสอบย้อนหลังได้ 100%
+                </p>
 
-            <!-- Filter Panel -->
-            <div class="audit-card">
-                <form method="GET" action="audit_log.php" id="filterForm">
-                    <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
-                        <!-- Period filter -->
-                        <div style="flex: 1; min-width: 170px;">
-                            <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.35rem;">ช่วงเวลา</label>
-                            <select name="filter_type" id="filter_type" class="form-control" onchange="handlePeriodChange()" style="width:100%; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border);">
-                                <option value="today" <?php echo $filter_type === 'today' ? 'selected' : ''; ?>>วันนี้ (Today)</option>
-                                <option value="month" <?php echo $filter_type === 'month' ? 'selected' : ''; ?>>เดือนนี้ (This Month)</option>
-                                <option value="year" <?php echo $filter_type === 'year' ? 'selected' : ''; ?>>ปีนี้ (This Year)</option>
-                                <option value="all" <?php echo $filter_type === 'all' ? 'selected' : ''; ?>>ทั้งหมด (All Time)</option>
-                                <option value="custom" <?php echo $filter_type === 'custom' ? 'selected' : ''; ?>>กำหนดเอง (Custom)</option>
-                            </select>
-                        </div>
-
-                        <!-- Branch filter -->
-                        <div style="flex: 1; min-width: 160px;">
-                            <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.35rem;">สาขา</label>
-                            <select name="branch_id" class="form-control" style="width:100%; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border);">
-                                <option value="0" <?php echo $branch_id == 0 ? 'selected' : ''; ?>>ทุกสาขา</option>
-                                <option value="1" <?php echo $branch_id == 1 ? 'selected' : ''; ?>>สาขาดอกคำใต้</option>
-                                <option value="2" <?php echo $branch_id == 2 ? 'selected' : ''; ?>>สาขาท่าวังทอง</option>
-                            </select>
-                        </div>
-
-                        <!-- Action filter -->
-                        <div style="flex: 1; min-width: 180px;">
-                            <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.35rem;">ประเภทกิจกรรม</label>
-                            <select name="action_sel" class="form-control" style="width:100%; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border);">
-                                <option value="ALL" <?php echo $action_sel === 'ALL' ? 'selected' : ''; ?>>ทั้งหมดทุกกิจกรรม</option>
-                                <option value="EDIT" <?php echo $action_sel === 'EDIT' ? 'selected' : ''; ?>>✏️ มีการแก้ไขข้อมูล (EDIT)</option>
-                                <option value="CANCEL" <?php echo $action_sel === 'CANCEL' ? 'selected' : ''; ?>>🚫 มีการยกเลิกบิล (CANCEL)</option>
-                                <option value="REPRINT" <?php echo $action_sel === 'REPRINT' ? 'selected' : ''; ?>>🖨️ มีการพิมพ์ซ้ำ (REPRINT)</option>
-                                <option value="CREATE" <?php echo $action_sel === 'CREATE' ? 'selected' : ''; ?>>🟢 สร้างบิลใหม่ (CREATE)</option>
-                                <option value="PRINT" <?php echo $action_sel === 'PRINT' ? 'selected' : ''; ?>>🔵 พิมพ์บิลครั้งแรก (PRINT)</option>
-                            </select>
-                        </div>
-
-                        <!-- Keyword search -->
-                        <div style="flex: 1.5; min-width: 220px;">
-                            <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.35rem;">ค้นหา (เลขที่บิล, ชื่อพนักงาน, เหตุผล)</label>
-                            <input type="text" name="q" class="form-control" placeholder="เช่น 171697, นัยนา, แก้ไข..." value="<?php echo htmlspecialchars($q); ?>" style="width:100%; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border);">
-                        </div>
-
-                        <!-- Submit Buttons -->
-                        <div style="display:flex; gap:0.5rem;">
-                            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">🔍 ค้นหา</button>
-                            <a href="audit_log.php" class="btn btn-secondary" style="padding: 0.5rem 1rem;">ล้างค่า</a>
-                        </div>
-                    </div>
-
-                    <!-- Custom Date Fields (shown when filter_type === 'custom') -->
-                    <div id="customDateFields" style="display: <?php echo $filter_type === 'custom' ? 'flex' : 'none'; ?>; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border);">
+                <!-- Stat Summary Cards -->
+                <div class="stat-grid">
+                    <div class="stat-box">
                         <div>
-                            <label style="font-size:0.75rem; color:var(--text-muted); display:block;">จากวันที่</label>
-                            <input type="number" min="1" max="31" name="day" value="<?php echo $day > 0 ? $day : ''; ?>" placeholder="เช่น 1" style="width:80px; padding:0.4rem; border:1px solid var(--border); border-radius:4px;">
+                            <div class="stat-label">ประวัติการทำรายการทั้งหมด</div>
+                            <div class="stat-value"><?php echo number_format($total_logs); ?></div>
                         </div>
-                        <div>
-                            <label style="font-size:0.75rem; color:var(--text-muted); display:block;">ถึงวันที่</label>
-                            <input type="number" min="1" max="31" name="day2" value="<?php echo $day2 > 0 ? $day2 : ''; ?>" placeholder="เช่น 31" style="width:80px; padding:0.4rem; border:1px solid var(--border); border-radius:4px;">
-                        </div>
-                        <div>
-                            <label style="font-size:0.75rem; color:var(--text-muted); display:block;">เดือน</label>
-                            <select name="month" style="padding:0.4rem; border:1px solid var(--border); border-radius:4px;">
-                                <option value="0">ทุกเดือน</option>
-                                <?php for ($m = 1; $m <= 12; $m++): ?>
-                                    <option value="<?php echo $m; ?>" <?php echo $month == $m ? 'selected' : ''; ?>><?php echo $months_th[$m]; ?></option>
-                                <?php endfor; ?>
-                            </select>
-                        </div>
-                        <div>
-                            <label style="font-size:0.75rem; color:var(--text-muted); display:block;">ปี พ.ศ.</label>
-                            <input type="number" name="year" value="<?php echo $year; ?>" style="width:90px; padding:0.4rem; border:1px solid var(--border); border-radius:4px;">
-                        </div>
+                        <div style="font-size: 2rem; opacity: 0.6;">📋</div>
                     </div>
-                </form>
-            </div>
-
-            <!-- Table of Audit Logs -->
-            <div class="audit-card" style="padding: 0; overflow: hidden;">
-                <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-                    <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin: 0;">
-                        📋 บันทึกกิจกรรมการขาย (พบ <?php echo number_format($total_logs); ?> รายการ)
-                    </h3>
-                    <div style="font-size: 0.85rem; color: var(--text-muted);">
-                        หน้า <?php echo $page; ?> จาก <?php echo max(1, $total_pages); ?>
+                    <div class="stat-box stat-edit">
+                        <div>
+                            <div class="stat-label">รายการที่มีการแก้ไขข้อมูล</div>
+                            <div class="stat-value" style="color: #d97706;"><?php echo number_format($count_edit); ?></div>
+                        </div>
+                        <div style="font-size: 2rem; opacity: 0.8;">✏️</div>
+                    </div>
+                    <div class="stat-box stat-cancel">
+                        <div>
+                            <div class="stat-label">ใบเสร็จที่ถูกยกเลิก</div>
+                            <div class="stat-value" style="color: #dc2626;"><?php echo number_format($count_cancel); ?></div>
+                        </div>
+                        <div style="font-size: 2rem; opacity: 0.8;">🚫</div>
+                    </div>
+                    <div class="stat-box stat-reprint">
+                        <div>
+                            <div class="stat-label">ใบเสร็จที่มีการพิมพ์ซ้ำ</div>
+                            <div class="stat-value" style="color: #7c3aed;"><?php echo number_format($count_reprint); ?></div>
+                        </div>
+                        <div style="font-size: 2rem; opacity: 0.8;">🖨️</div>
                     </div>
                 </div>
 
-                <div class="table-responsive" style="overflow-x: auto;">
-                    <table class="table-modern" style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="background: #f8fafc; border-bottom: 1.5px solid var(--border); text-align: left; font-size: 0.82rem; color: var(--text-muted);">
-                                <th style="padding: 10px 14px; width: 140px;">วัน-เวลา</th>
-                                <th style="padding: 10px 10px; width: 100px; text-align: center;">เลขที่บิล</th>
-                                <th style="padding: 10px 10px; width: 110px;">สาขา</th>
-                                <th style="padding: 10px 12px; width: 140px;">ผู้ทำรายการ</th>
-                                <th style="padding: 10px 12px; width: 130px; text-align: center;">กิจกรรม</th>
-                                <th style="padding: 10px 14px;">รายละเอียดการเปลี่ยนแปลง / หมายเหตุ</th>
-                                <th style="padding: 10px 12px; width: 140px;">เหตุผล</th>
-                                <th style="padding: 10px 12px; width: 130px; text-align: center;">เครื่องมือ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($logs)): ?>
-                                <tr>
-                                    <td colspan="8" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
-                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
-                                        <div>ไม่พบประวัติการทำรายการตามเงื่อนไขที่เลือก</div>
-                                    </td>
+                <!-- Filter Card -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-body" style="padding: 1.25rem;">
+                        <form method="GET" action="audit_log.php" id="filterForm">
+                            <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+                                <!-- Period filter -->
+                                <div style="flex: 1; min-width: 160px;">
+                                    <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.35rem;">ช่วงเวลา</label>
+                                    <select name="filter_type" id="filter_type" class="form-control" onchange="handlePeriodChange()" style="width:100%; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border);">
+                                        <option value="today" <?php echo $filter_type === 'today' ? 'selected' : ''; ?>>วันนี้ (Today)</option>
+                                        <option value="month" <?php echo $filter_type === 'month' ? 'selected' : ''; ?>>เดือนนี้ (This Month)</option>
+                                        <option value="year" <?php echo $filter_type === 'year' ? 'selected' : ''; ?>>ปีนี้ (This Year)</option>
+                                        <option value="all" <?php echo $filter_type === 'all' ? 'selected' : ''; ?>>ทั้งหมด (All Time)</option>
+                                        <option value="custom" <?php echo $filter_type === 'custom' ? 'selected' : ''; ?>>กำหนดเอง (Custom)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Branch filter -->
+                                <div style="flex: 1; min-width: 150px;">
+                                    <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.35rem;">สาขา</label>
+                                    <select name="branch_id" class="form-control" style="width:100%; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border);">
+                                        <option value="0" <?php echo $branch_id == 0 ? 'selected' : ''; ?>>ทุกสาขา</option>
+                                        <option value="1" <?php echo $branch_id == 1 ? 'selected' : ''; ?>>สาขาดอกคำใต้</option>
+                                        <option value="2" <?php echo $branch_id == 2 ? 'selected' : ''; ?>>สาขาท่าวังทอง</option>
+                                    </select>
+                                </div>
+
+                                <!-- Action filter -->
+                                <div style="flex: 1.2; min-width: 180px;">
+                                    <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.35rem;">ประเภทกิจกรรม</label>
+                                    <select name="action_sel" class="form-control" style="width:100%; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border);">
+                                        <option value="ALL" <?php echo $action_sel === 'ALL' ? 'selected' : ''; ?>>ทั้งหมดทุกกิจกรรม</option>
+                                        <option value="EDIT" <?php echo $action_sel === 'EDIT' ? 'selected' : ''; ?>>✏️ มีการแก้ไขข้อมูล (EDIT)</option>
+                                        <option value="CANCEL" <?php echo $action_sel === 'CANCEL' ? 'selected' : ''; ?>>🚫 มีการยกเลิกบิล (CANCEL)</option>
+                                        <option value="REPRINT" <?php echo $action_sel === 'REPRINT' ? 'selected' : ''; ?>>🖨️ มีการพิมพ์ซ้ำ (REPRINT)</option>
+                                        <option value="CREATE" <?php echo $action_sel === 'CREATE' ? 'selected' : ''; ?>>🟢 สร้างบิลใหม่ (CREATE)</option>
+                                        <option value="PRINT" <?php echo $action_sel === 'PRINT' ? 'selected' : ''; ?>>🔵 พิมพ์บิลครั้งแรก (PRINT)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Keyword search -->
+                                <div style="flex: 1.5; min-width: 200px;">
+                                    <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.35rem;">ค้นหา (เลขที่บิล, ชื่อพนักงาน, เหตุผล)</label>
+                                    <input type="text" name="q" class="form-control" placeholder="เช่น 171697, นัยนา, แก้ไข..." value="<?php echo htmlspecialchars($q); ?>" style="width:100%; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border);">
+                                </div>
+
+                                <!-- Submit Buttons -->
+                                <div style="display:flex; gap:0.5rem;">
+                                    <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">🔍 ค้นหา</button>
+                                    <a href="audit_log.php" class="btn btn-secondary" style="padding: 0.5rem 1rem;">ล้างค่า</a>
+                                </div>
+                            </div>
+
+                            <!-- Custom Date Fields (shown when filter_type === 'custom') -->
+                            <div id="customDateFields" style="display: <?php echo $filter_type === 'custom' ? 'flex' : 'none'; ?>; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border);">
+                                <div>
+                                    <label style="font-size:0.75rem; color:var(--text-muted); display:block;">จากวันที่</label>
+                                    <input type="number" min="1" max="31" name="day" value="<?php echo $day > 0 ? $day : ''; ?>" placeholder="เช่น 1" style="width:80px; padding:0.4rem; border:1px solid var(--border); border-radius:4px;">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; color:var(--text-muted); display:block;">ถึงวันที่</label>
+                                    <input type="number" min="1" max="31" name="day2" value="<?php echo $day2 > 0 ? $day2 : ''; ?>" placeholder="เช่น 31" style="width:80px; padding:0.4rem; border:1px solid var(--border); border-radius:4px;">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; color:var(--text-muted); display:block;">เดือน</label>
+                                    <select name="month" style="padding:0.4rem; border:1px solid var(--border); border-radius:4px;">
+                                        <option value="0">ทุกเดือน</option>
+                                        <?php for ($m = 1; $m <= 12; $m++): ?>
+                                            <option value="<?php echo $m; ?>" <?php echo $month == $m ? 'selected' : ''; ?>><?php echo $months_th[$m]; ?></option>
+                                        <?php endfor; ?>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; color:var(--text-muted); display:block;">ปี พ.ศ.</label>
+                                    <input type="number" name="year" value="<?php echo $year; ?>" style="width:90px; padding:0.4rem; border:1px solid var(--border); border-radius:4px;">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Table Card -->
+                <div class="card" style="overflow: hidden;">
+                    <div class="card-header" style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+                        <h3 class="card-title" style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin: 0;">
+                            📋 บันทึกกิจกรรมการขาย (พบ <?php echo number_format($total_logs); ?> รายการ)
+                        </h3>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">
+                            หน้า <?php echo $page; ?> จาก <?php echo max(1, $total_pages); ?>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive" style="overflow-x: auto;">
+                        <table class="table-modern" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 1.5px solid var(--border); text-align: left; font-size: 0.82rem; color: var(--text-muted);">
+                                    <th style="padding: 10px 14px; width: 140px;">วัน-เวลา</th>
+                                    <th style="padding: 10px 10px; width: 100px; text-align: center;">เลขที่บิล</th>
+                                    <th style="padding: 10px 10px; width: 110px;">สาขา</th>
+                                    <th style="padding: 10px 12px; width: 140px;">ผู้ทำรายการ</th>
+                                    <th style="padding: 10px 12px; width: 130px; text-align: center;">กิจกรรม</th>
+                                    <th style="padding: 10px 14px;">รายละเอียดการเปลี่ยนแปลง / หมายเหตุ</th>
+                                    <th style="padding: 10px 12px; width: 140px;">เหตุผล</th>
+                                    <th style="padding: 10px 12px; width: 130px; text-align: center;">เครื่องมือ</th>
                                 </tr>
-                            <?php else: ?>
-                                <?php foreach ($logs as $l): ?>
-                                    <?php 
-                                        $act = $l['action'];
-                                        $act_class = 'act-' . $act;
-                                        $is_suspicious = ($act === 'EDIT' || $act === 'CANCEL');
-                                    ?>
-                                    <tr style="border-bottom: 1px solid var(--border); font-size: 0.85rem; <?php echo $is_suspicious ? 'background-color: #fffdfa;' : ''; ?>">
-                                        <td style="padding: 10px 14px; color: var(--text-muted); font-size: 0.82rem; white-space: nowrap;">
-                                            <?php echo thai_datetime($l['created_at']); ?>
-                                        </td>
-                                        <td style="padding: 10px 10px; text-align: center; font-weight: 700;">
-                                            <a href="javascript:void(0)" onclick="viewTimeline(<?php echo $l['id_pay']; ?>)" style="color: var(--primary); text-decoration: underline;" title="คลิกเพื่อดูประวัติบิลนี้ทั้งหมด">
-                                                #<?php echo htmlspecialchars($l['id_pay']); ?>
-                                            </a>
-                                        </td>
-                                        <td style="padding: 10px 10px;">
-                                            <?php if ($l['id_branch'] == 1): ?>
-                                                <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size:0.75rem;">ดอกคำใต้</span>
-                                            <?php else: ?>
-                                                <span class="badge" style="background:#dcfce7; color:#15803d; font-size:0.75rem;">ท่าวังทอง</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td style="padding: 10px 12px; font-weight: 500;">
-                                            <?php echo htmlspecialchars($l['emp_name']); ?>
-                                        </td>
-                                        <td style="padding: 10px 12px; text-align: center;">
-                                            <span class="badge-act <?php echo $act_class; ?>">
-                                                <?php 
-                                                    if ($act === 'CREATE')  echo '🟢 สร้างบิล';
-                                                    elseif ($act === 'EDIT')    echo '✏️ แก้ไขข้อมูล';
-                                                    elseif ($act === 'CANCEL')  echo '🚫 ยกเลิกบิล';
-                                                    elseif ($act === 'REPRINT') echo '🖨️ พิมพ์ซ้ำ';
-                                                    elseif ($act === 'PRINT')   echo '🔵 พิมพ์บิล';
-                                                    else echo htmlspecialchars($l['action_label']);
-                                                ?>
-                                            </span>
-                                        </td>
-                                        <td style="padding: 10px 14px; line-height: 1.45;">
-                                            <div style="color: var(--text-main);">
-                                                <?php echo htmlspecialchars($l['changes_summary']); ?>
-                                            </div>
-                                            <?php if (!empty($l['ip_address'])): ?>
-                                                <small style="color: #94a3b8; font-size: 0.73rem;">IP: <?php echo htmlspecialchars($l['ip_address']); ?></small>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td style="padding: 10px 12px; color: #b45309; font-weight: 500;">
-                                            <?php echo !empty($l['reason']) ? htmlspecialchars($l['reason']) : '<span style="color:#cbd5e1;">-</span>'; ?>
-                                        </td>
-                                        <td style="padding: 10px 12px; text-align: center; white-space: nowrap;">
-                                            <button type="button" class="btn btn-secondary btn-sm" style="padding: 3px 8px; font-size: 0.78rem;" onclick="viewTimeline(<?php echo $l['id_pay']; ?>)">
-                                                📜 ไทม์ไลน์
-                                            </button>
-                                            <?php if ($act === 'EDIT' && !empty($l['old_data'])): ?>
-                                                <button type="button" class="btn btn-primary btn-sm" style="padding: 3px 8px; font-size: 0.78rem; background: #f59e0b; border-color: #f59e0b;" onclick="viewDiff(<?php echo $l['id_log']; ?>)">
-                                                    🔍 ตรวจค่า
-                                                </button>
-                                            <?php endif; ?>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($logs)): ?>
+                                    <tr>
+                                        <td colspan="8" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                                            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
+                                            <div>ไม่พบประวัติการทำรายการตามเงื่อนไขที่เลือก</div>
                                         </td>
                                     </tr>
-                                <?php endforeach; ?>
+                                <?php else: ?>
+                                    <?php foreach ($logs as $l): ?>
+                                        <?php 
+                                            $act = $l['action'];
+                                            $act_class = 'act-' . $act;
+                                            $is_suspicious = ($act === 'EDIT' || $act === 'CANCEL');
+                                        ?>
+                                        <tr style="border-bottom: 1px solid var(--border); font-size: 0.85rem; <?php echo $is_suspicious ? 'background-color: #fffdfa;' : ''; ?>">
+                                            <td style="padding: 10px 14px; color: var(--text-muted); font-size: 0.82rem; white-space: nowrap;">
+                                                <?php echo thai_datetime($l['created_at']); ?>
+                                            </td>
+                                            <td style="padding: 10px 10px; text-align: center; font-weight: 700;">
+                                                <a href="javascript:void(0)" onclick="viewTimeline(<?php echo $l['id_pay']; ?>)" style="color: var(--primary); text-decoration: underline;" title="คลิกเพื่อดูประวัติบิลนี้ทั้งหมด">
+                                                    #<?php echo htmlspecialchars($l['id_pay']); ?>
+                                                </a>
+                                            </td>
+                                            <td style="padding: 10px 10px;">
+                                                <?php if ($l['id_branch'] == 1): ?>
+                                                    <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size:0.75rem;">ดอกคำใต้</span>
+                                                <?php else: ?>
+                                                    <span class="badge" style="background:#dcfce7; color:#15803d; font-size:0.75rem;">ท่าวังทอง</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td style="padding: 10px 12px; font-weight: 500;">
+                                                <?php echo htmlspecialchars($l['emp_name']); ?>
+                                            </td>
+                                            <td style="padding: 10px 12px; text-align: center;">
+                                                <span class="badge-act <?php echo $act_class; ?>">
+                                                    <?php 
+                                                        if ($act === 'CREATE')  echo '🟢 สร้างบิล';
+                                                        elseif ($act === 'EDIT')    echo '✏️ แก้ไขข้อมูล';
+                                                        elseif ($act === 'CANCEL')  echo '🚫 ยกเลิกบิล';
+                                                        elseif ($act === 'REPRINT') echo '🖨️ พิมพ์ซ้ำ';
+                                                        elseif ($act === 'PRINT')   echo '🔵 พิมพ์บิล';
+                                                        else echo htmlspecialchars($l['action_label']);
+                                                    ?>
+                                                </span>
+                                            </td>
+                                            <td style="padding: 10px 14px; line-height: 1.45;">
+                                                <div style="color: var(--text-main);">
+                                                    <?php echo htmlspecialchars($l['changes_summary']); ?>
+                                                </div>
+                                                <?php if (!empty($l['ip_address'])): ?>
+                                                    <small style="color: #94a3b8; font-size: 0.73rem;">IP: <?php echo htmlspecialchars($l['ip_address']); ?></small>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td style="padding: 10px 12px; color: #b45309; font-weight: 500;">
+                                                <?php echo !empty($l['reason']) ? htmlspecialchars($l['reason']) : '<span style="color:#cbd5e1;">-</span>'; ?>
+                                            </td>
+                                            <td style="padding: 10px 12px; text-align: center; white-space: nowrap;">
+                                                <button type="button" class="btn btn-secondary btn-sm" style="padding: 3px 8px; font-size: 0.78rem;" onclick="viewTimeline(<?php echo $l['id_pay']; ?>)">
+                                                    📜 ไทม์ไลน์
+                                                </button>
+                                                <?php if ($act === 'EDIT' && !empty($l['old_data'])): ?>
+                                                    <button type="button" class="btn btn-primary btn-sm" style="padding: 3px 8px; font-size: 0.78rem; background: #f59e0b; border-color: #f59e0b;" onclick="viewDiff(<?php echo $l['id_log']; ?>)">
+                                                        🔍 ตรวจค่า
+                                                    </button>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <?php if ($total_pages > 1): ?>
+                        <div style="padding: 1rem 1.25rem; border-top: 1px solid var(--border); display: flex; justify-content: center; gap: 0.35rem; flex-wrap: wrap;">
+                            <?php if ($page > 1): ?>
+                                <a href="<?php echo $build_query(array('page' => $page - 1)); ?>" class="btn btn-secondary btn-sm">« ก่อนหน้า</a>
                             <?php endif; ?>
-                        </tbody>
-                    </table>
+                            
+                            <?php 
+                            $p_start = max(1, $page - 2);
+                            $p_end   = min($total_pages, $page + 2);
+                            for ($pi = $p_start; $pi <= $p_end; $pi++): 
+                            ?>
+                                <a href="<?php echo $build_query(array('page' => $pi)); ?>" class="btn btn-sm <?php echo $pi == $page ? 'btn-primary' : 'btn-secondary'; ?>">
+                                    <?php echo $pi; ?>
+                                </a>
+                            <?php endfor; ?>
+
+                            <?php if ($page < $total_pages): ?>
+                                <a href="<?php echo $build_query(array('page' => $page + 1)); ?>" class="btn btn-secondary btn-sm">ถัดไป »</a>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
-                <!-- Pagination -->
-                <?php if ($total_pages > 1): ?>
-                    <div style="padding: 1rem 1.25rem; border-top: 1px solid var(--border); display: flex; justify-content: center; gap: 0.35rem; flex-wrap: wrap;">
-                        <?php if ($page > 1): ?>
-                            <a href="<?php echo $build_query(array('page' => $page - 1)); ?>" class="btn btn-secondary btn-sm">« ก่อนหน้า</a>
-                        <?php endif; ?>
-                        
-                        <?php 
-                        $p_start = max(1, $page - 2);
-                        $p_end   = min($total_pages, $page + 2);
-                        for ($pi = $p_start; $pi <= $p_end; $pi++): 
-                        ?>
-                            <a href="<?php echo $build_query(array('page' => $pi)); ?>" class="btn btn-sm <?php echo $pi == $page ? 'btn-primary' : 'btn-secondary'; ?>">
-                                <?php echo $pi; ?>
-                            </a>
-                        <?php endfor; ?>
-
-                        <?php if ($page < $total_pages): ?>
-                            <a href="<?php echo $build_query(array('page' => $page + 1)); ?>" class="btn btn-secondary btn-sm">ถัดไป »</a>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </main>
-    </div>
+            </div> <!-- .content-body -->
+        </div> <!-- .main-wrapper -->
+    </div> <!-- .app-container -->
 
     <!-- Modal 1: Bill Timeline Modal -->
     <div class="modal-overlay" id="timelineModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
