@@ -53,15 +53,21 @@ try {
     }
 
     $current_status = intval($old_pay['pay_status']);
-    if ($current_status === 3 || $current_status === 4) {
-        // Already cancelled or already pending cancellation
+    if ($current_status === 2) {
+        // Already printed — clerks cannot request cancel on printed receipts
+        $sep = (strpos($return_url, '?') !== false) ? '&' : '?';
+        header("Location: " . $return_url . $sep . "cancel_req=printed");
+        exit;
+    }
+    if ($current_status !== 1) {
+        // Already cancelled (3) or already pending cancellation (4)
         $sep = (strpos($return_url, '?') !== false) ? '&' : '?';
         header("Location: " . $return_url . $sep . "cancel_req=already");
         exit;
     }
 
-    // 2. Set pay_status = 4 (Pending Manager Approval) — excluded from daily totals immediately
-    $stmt = $pdo->prepare("UPDATE `payment` SET `pay_status` = 4 WHERE `id_pay` = :id_pay AND `id_branch` = :id_branch");
+    // 2. Set pay_status = 4 (Pending Manager Approval) — only if still Draft (1)
+    $stmt = $pdo->prepare("UPDATE `payment` SET `pay_status` = 4 WHERE `id_pay` = :id_pay AND `id_branch` = :id_branch AND `pay_status` = 1");
     $stmt->execute(array(':id_pay' => $id_pay, ':id_branch' => $id_branch));
 
     // 3. Log activity for Manager review & Audit Log (stores old_pay including previous pay_status)

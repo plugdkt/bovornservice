@@ -577,6 +577,10 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                     <div style="background:#fef2f2; border:1px solid #ef4444; color:#991b1b; padding:0.85rem 1.25rem; border-radius:10px; margin-bottom:1rem; font-size:0.9rem; font-weight:600;">
                         ⚠️ กรุณาระบุเหตุผลการแจ้งยกเลิกก่อนยืนยัน
                     </div>
+                <?php elseif ($_GET['cancel_req'] === 'printed'): ?>
+                    <div style="background:#fef2f2; border:1px solid #ef4444; color:#991b1b; padding:0.85rem 1.25rem; border-radius:10px; margin-bottom:1rem; font-size:0.9rem; font-weight:600;">
+                        🔒 ไม่สามารถแจ้งยกเลิกได้ เนื่องจากบิลนี้พิมพ์ใบเสร็จไปแล้ว (กรุณาติดต่อผู้จัดการ)
+                    </div>
                 <?php elseif ($_GET['cancel_req'] === 'already'): ?>
                     <div style="background:#fffbeb; border:1px solid #f59e0b; color:#92400e; padding:0.85rem 1.25rem; border-radius:10px; margin-bottom:1rem; font-size:0.9rem; font-weight:600;">
                         ℹ️ รายการนี้ถูกแจ้งยกเลิกหรือยกเลิกไปแล้ว
@@ -687,8 +691,10 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                                 <td class="center" style="white-space:nowrap;">
                                     <div style="display:inline-flex; gap:0.35rem; align-items:center;">
                                         <button class="btn-inspect" onclick="showDetails(<?php echo $p['id_pay']; ?>)">🔎 รายละเอียด</button>
-                                        <?php if (!$is_pending_cancel): ?>
+                                        <?php if (intval($p['pay_status']) === 1): ?>
                                             <button type="button" class="btn-req-cancel" onclick="openCancelReqModal(<?php echo $p['id_pay']; ?>, '<?php echo htmlspecialchars($p['cus_name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($p['car_regis_id'], ENT_QUOTES); ?>', <?php echo floatval($p['pay_total']); ?>)">🚫 แจ้งยกเลิก</button>
+                                        <?php elseif (intval($p['pay_status']) === 2): ?>
+                                            <button type="button" disabled style="background:#f1f5f9; color:#94a3b8; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.65rem; font-size:0.78rem; font-weight:600; cursor:not-allowed; white-space:nowrap;" title="พิมพ์ใบเสร็จแล้ว ไม่สามารถแจ้งยกเลิกได้ (กรุณาติดต่อผู้จัดการ)">🔒 พิมพ์แล้ว</button>
                                         <?php endif; ?>
                                     </div>
                                 </td>
