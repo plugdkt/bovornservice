@@ -290,6 +290,12 @@ if ($is_daily) {
         }
     }
 }
+
+// Date parameters for printing tax referral popup
+$print_day = !empty($p_day) ? $p_day : ($day > 0 ? $day : intval(date('d')));
+$print_month = !empty($p_month) ? $p_month : ($month > 0 ? $month : intval(date('m')));
+$print_year = !empty($p_year) ? $p_year : ($year > 0 ? $year : (intval(date('Y')) + 543));
+$print_branch = $branch_id > 0 ? $branch_id : 1;
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -303,6 +309,59 @@ if ($is_daily) {
         .text-center { text-align: center; }
         .text-danger { color: var(--danger); font-weight: 600; }
         .text-primary { color: var(--primary); font-weight: 600; }
+
+        /* Detailed Breakdown Report Table (matching reference image) */
+        .btn-print-tax-direct {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #2563eb;
+            color: #ffffff;
+            padding: 5px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 6px;
+            border: 1px solid #1d4ed8;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-family: inherit;
+        }
+        .btn-print-tax-direct:hover {
+            background: #1d4ed8;
+            color: #ffffff;
+        }
+        .table-report-detailed {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+        }
+        .table-report-detailed th,
+        .table-report-detailed td {
+            border: 1px solid #cbd5e1;
+            padding: 6px 8px;
+            vertical-align: middle;
+        }
+        .table-report-detailed th {
+            background-color: #CCE6FF;
+            color: #0f172a;
+            font-weight: 700;
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .table-report-detailed tbody tr:hover {
+            background-color: #f8fafc;
+        }
+        .table-report-detailed tfoot td {
+            background-color: #CCE6FF;
+            color: #0f172a;
+            font-weight: 700;
+            border: 1px solid #cbd5e1;
+        }
 
         /* Print Tax Referral Button */
         .btn-print-tax {
@@ -884,83 +943,121 @@ if ($is_daily) {
                         </div>
                     <?php endif; ?>
 
-                    <!-- SEARCH RESULTS TABLE -->
-                    <div class="card">
-                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-                            <h3 class="card-title">🏢 รายการเข้าใช้บริการ (ทั้งหมด <?php echo number_format($total_records); ?> รายการ)</h3>
-                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <!-- SEARCH RESULTS TABLE (DETAILED BREAKDOWN) -->
+                    <div class="card" style="padding: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+                                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #1e293b;">
+                                    สาขา<?php echo $branch_id == 1 ? 'ดอกคำใต้' : ($branch_id == 2 ? 'ท่าวังทอง' : 'ทุกสาขา'); ?>
+                                </h3>
+                                <button type="button" 
+                                        onclick="openTaxReferralPopup('../print_tax_referral.php?day=<?php echo $print_day; ?>&month=<?php echo $print_month; ?>&year=<?php echo $print_year; ?>&id_branch=<?php echo $print_branch; ?>')"
+                                        class="btn-print-tax-direct" title="พิมพ์ใบส่งต่อภาษีรายวัน">
+                                    🖨️ พิมพ์ใบส่งต่อภาษีรายวัน
+                                </button>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #64748b;">
+                                ทั้งหมด <strong><?php echo number_format($total_records); ?></strong> รายการ
                                 <?php if ($total_pages > 1): ?>
-                                    <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
-                                        หน้า <?php echo $page; ?> จาก <?php echo $total_pages; ?>
-                                    </span>
+                                    &nbsp;·&nbsp; หน้า <?php echo $page; ?> จาก <?php echo $total_pages; ?>
                                 <?php endif; ?>
                             </div>
                         </div>
                         
-                        <div class="table-container">
-                            <table class="table-modern" style="font-size: 0.85rem;">
+                        <div class="table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <table class="table-report-detailed">
                                 <thead>
                                     <tr>
-                                        <th style="width: 40px;" class="text-center">#</th>
-                                        <th style="width: 80px;" class="text-center">เลขบิล</th>
-                                        <th>ชื่อลูกค้า</th>
-                                        <th style="width: 140px;" class="text-center">ทะเบียนรถ</th>
-                                        <th style="width: 120px;" class="text-right text-primary">ยอดชำระสุทธิ</th>
-                                        <th style="width: 110px;" class="text-center">การชำระเงิน</th>
-                                        <th style="width: 120px;" class="text-center">สาขา</th>
-                                        <th style="width: 160px;" class="text-center">เวลาธุรกรรม</th>
-                                        <th class="text-center no-print" style="width: 140px;">การจัดการ</th>
+                                        <th style="width: 35px;">#</th>
+                                        <th style="min-width: 140px;">ชื่อ-สกุล</th>
+                                        <th style="min-width: 95px;">ทะเบียนรถ</th>
+                                        <th style="min-width: 80px;">จังหวัด</th>
+                                        <th style="min-width: 55px;">พรบ</th>
+                                        <th style="min-width: 55px;">ตรอ</th>
+                                        <th style="min-width: 55px;">ภาษี</th>
+                                        <th style="min-width: 65px;">ภาษี<br>ย้อนหลัง</th>
+                                        <th style="min-width: 55px;">ค่าปรับ</th>
+                                        <th style="min-width: 55px;">ค่าเล่ม</th>
+                                        <th style="min-width: 60px;">ค่า<br>บริการ</th>
+                                        <th style="min-width: 55px;">ส่วนลด</th>
+                                        <th style="min-width: 80px;">รวมสุทธิ</th>
+                                        <th style="min-width: 75px;" class="no-print">#</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php 
-                                    $idx = $offset + 1; 
-                                    foreach ($payments as $p): 
-                                        $is_cancelled = (isset($p['pay_status']) ? intval($p['pay_status']) : 0) === 3;
-                                        $row_style = $is_cancelled ? 'style="background: #fff5f5; color: #b91c1c; opacity: 0.9;"' : '';
+                                    if (empty($payments)): 
                                     ?>
-                                        <tr <?php echo $row_style; ?>>
-                                            <td class="text-center"><?php echo $idx++; ?></td>
-                                            <td class="text-center" style="font-weight: 600;">#<?php echo $p['id_pay']; ?></td>
-                                            <td>
-                                                <strong><?php echo htmlspecialchars($p['cus_name']); ?></strong>
-                                                <?php if ($is_cancelled): ?>
-                                                    <span style="font-size: 0.725rem; font-weight: bold; color: #ef4444; background: #fee2e2; padding: 1px 6px; border-radius: 4px; margin-left: 0.35rem;">ยกเลิกแล้ว</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="text-center"><?php echo htmlspecialchars($p['car_regis_id'] . ' (' . $p['province_name'] . ')'); ?></td>
-                                            <td class="text-right <?php echo $is_cancelled ? 'text-danger' : 'text-primary'; ?>" style="font-weight: 600;"><?php echo number_format($p['pay_total']); ?> บาท</td>
-                                            <td class="text-center">
-                                                <?php if ($is_cancelled): ?>
-                                                    <span class="badge" style="background-color: #fca5a5; color: #b91c1c; font-size: 0.75rem; padding: 3px 8px; font-weight: 600;">🚫 ยกเลิกแล้ว</span>
-                                                <?php elseif ((isset($p['pay_type']) ? $p['pay_type'] : 1) == 2): ?>
-                                                    <span class="badge" style="background-color: #e0e7ff; color: #4338ca; font-size: 0.75rem; padding: 3px 8px; font-weight: 600;">📱 เงินโอน</span>
-                                                <?php else: ?>
-                                                    <span class="badge" style="background-color: #fef3c7; color: #d97706; font-size: 0.75rem; padding: 3px 8px; font-weight: 600;">💵 เงินสด</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge" style="background-color: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 600;">
-                                                    <?php echo htmlspecialchars($p['branch_name']); ?>
-                                                </span>
-                                            </td>
-                                            <td class="text-center" style="font-size: 0.8rem; color: var(--text-muted);">
-                                                <?php echo $p['pay_day'] . '/' . $p['pay_month'] . '/' . ($p['pay_year'] + 543) . ' ' . substr($p['pay_time'], 0, 5) . ' น.'; ?>
-                                            </td>
-                                            <td class="text-center no-print" style="display: flex; gap: 0.35rem; justify-content: center; align-items: center;">
-                                                <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 7px; font-size: 11px;" onclick="showDetails(<?php echo $p['id_pay']; ?>)">ตรวจสอบ</button>
-                                                <button type="button" class="btn btn-sm" style="padding: 2px 7px; font-size: 11px; background: #f8fafc; border: 1px solid #cbd5e1; color: #475569;" onclick="viewBillTimeline(<?php echo $p['id_pay']; ?>)" title="ดูประวัติการแก้ไขและไทม์ไลน์">📜 ประวัติ</button>
-                                                <?php if (!$is_cancelled): ?>
-                                                    <button type="button" class="btn btn-danger btn-sm" style="padding: 2px 7px; font-size: 11px;" onclick="openCancelModal(<?php echo $p['id_pay']; ?>, '<?php echo htmlspecialchars(isset($p['cus_name']) ? $p['cus_name'] : '', ENT_QUOTES); ?>', <?php echo floatval($p['pay_total']); ?>)">ยกเลิก</button>
-                                                <?php else: ?>
-                                                    <span class="badge" style="background-color: #ef4444; color: #fff; font-size: 10px; padding: 3px 6px; font-weight: 600; opacity: 0.85; cursor: not-allowed;">ยกเลิกแล้ว</span>
-                                                <?php endif; ?>
+                                        <tr>
+                                            <td colspan="14" style="text-align: center; padding: 2.5rem 1rem; color: #64748b;">
+                                                <div style="font-size: 1.75rem; margin-bottom: 0.35rem;">🔍</div>
+                                                <div style="font-size: 0.95rem; font-weight: 600;">ไม่พบรายการเข้าใช้บริการตามเงื่อนไขที่เลือก</div>
                                             </td>
                                         </tr>
-                                    <?php endforeach; ?>
-                                    
-
+                                    <?php 
+                                    else:
+                                        $idx = $offset + 1; 
+                                        foreach ($payments as $p): 
+                                            $is_cancelled = (isset($p['pay_status']) ? intval($p['pay_status']) : 0) === 3;
+                                            $row_style = $is_cancelled ? 'style="background-color: #fee2e2; color: #991b1b;"' : '';
+                                    ?>
+                                        <tr <?php echo $row_style; ?>>
+                                            <td style="text-align: center; font-size: 0.85rem;"><?php echo $idx++; ?></td>
+                                            <td style="text-align: left;">
+                                                <div style="font-weight: 600; color: #1e293b;"><?php echo htmlspecialchars($p['cus_name']); ?></div>
+                                                <?php if (!empty($p['cus_phone'])): ?>
+                                                    <div style="font-size: 0.775rem; color: #64748b;"><?php echo htmlspecialchars($p['cus_phone']); ?></div>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td style="text-align: center; white-space: nowrap;">
+                                                <?php echo htmlspecialchars($p['car_regis_id']); ?>
+                                            </td>
+                                            <td style="text-align: center; white-space: nowrap;">
+                                                <?php echo htmlspecialchars($p['province_name']); ?>
+                                            </td>
+                                            <td style="text-align: right;"><?php echo number_format($p['serv_1']); ?></td>
+                                            <td style="text-align: right;"><?php echo number_format($p['serv_2']); ?></td>
+                                            <td style="text-align: right;"><?php echo number_format($p['serv_3']); ?></td>
+                                            <td style="text-align: right;"><?php echo number_format($p['serv_4']); ?></td>
+                                            <td style="text-align: right;"><?php echo number_format($p['serv_5']); ?></td>
+                                            <td style="text-align: right;"><?php echo number_format($p['serv_6']); ?></td>
+                                            <td style="text-align: right;"><?php echo number_format($p['serv_7']); ?></td>
+                                            <td style="text-align: right;"><?php echo number_format($p['discount']); ?></td>
+                                            <td style="text-align: right; font-weight: 700; color: <?php echo $is_cancelled ? '#dc2626' : '#1e293b'; ?>;">
+                                                <?php echo number_format($p['pay_total']); ?>
+                                            </td>
+                                            <td style="text-align: center; white-space: nowrap;" class="no-print">
+                                                <?php if ($is_cancelled): ?>
+                                                    <span style="color: #dc2626; font-weight: bold; font-size: 0.8rem;">ยกเลิกแล้ว</span>
+                                                <?php else: ?>
+                                                    <a href="javascript:void(0)" onclick="openCancelModal(<?php echo $p['id_pay']; ?>, '<?php echo htmlspecialchars(isset($p['cus_name']) ? $p['cus_name'] : '', ENT_QUOTES); ?>', <?php echo floatval($p['pay_total']); ?>)" 
+                                                       style="color: #2563eb; text-decoration: none; font-size: 0.85rem; font-weight: 500;" title="ยกเลิกใบเสร็จ">ยกเลิก</a>
+                                                <?php endif; ?>
+                                                <span style="color: #cbd5e1; margin: 0 3px;">|</span>
+                                                <a href="javascript:void(0)" onclick="showDetails(<?php echo $p['id_pay']; ?>)" style="color: #64748b; text-decoration: none; font-size: 0.8rem;" title="ตรวจสอบรายละเอียด">ตรวจ</a>
+                                                <a href="javascript:void(0)" onclick="viewBillTimeline(<?php echo $p['id_pay']; ?>)" style="color: #64748b; text-decoration: none; font-size: 0.85rem; margin-left: 2px;" title="ประวัติการแก้ไขและไทม์ไลน์">📜</a>
+                                            </td>
+                                        </tr>
+                                    <?php 
+                                        endforeach; 
+                                    endif;
+                                    ?>
                                 </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="4" style="text-align: right; font-weight: bold; padding-right: 12px;">รวม</td>
+                                        <td style="text-align: right; font-weight: bold;"><?php echo number_format($sum_1); ?></td>
+                                        <td style="text-align: right; font-weight: bold;"><?php echo number_format($sum_2); ?></td>
+                                        <td style="text-align: right; font-weight: bold;"><?php echo number_format($sum_3); ?></td>
+                                        <td style="text-align: right; font-weight: bold;"><?php echo number_format($sum_4); ?></td>
+                                        <td style="text-align: right; font-weight: bold;"><?php echo number_format($sum_5); ?></td>
+                                        <td style="text-align: right; font-weight: bold;"><?php echo number_format($sum_6); ?></td>
+                                        <td style="text-align: right; font-weight: bold;"><?php echo number_format($sum_7); ?></td>
+                                        <td style="text-align: right; font-weight: bold;"><?php echo number_format($sum_disc); ?></td>
+                                        <td style="text-align: right; font-weight: bold;"><?php echo number_format($total_sum); ?></td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
 
@@ -980,9 +1077,9 @@ if ($is_daily) {
                                 
                                 <!-- Previous page link -->
                                 <?php if ($page > 1): ?>
-                                    <a href="<?php echo $build_page_link($page - 1); ?>" class="btn-page">« ก่อนหน้า</a>
+                                    <a href="<?php echo $build_page_link($page - 1); ?>" class="btn-page">« ย้อนกลับ</a>
                                 <?php else: ?>
-                                    <span class="btn-page disabled">« ก่อนหน้า</span>
+                                    <span class="btn-page disabled">« ย้อนกลับ</span>
                                 <?php endif; ?>
                                 
                                 <!-- Page numbers -->
