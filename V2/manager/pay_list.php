@@ -923,7 +923,7 @@ $print_branch = $branch_id > 0 ? $branch_id : 1;
                                 </div>
                                 
                                 <!-- Fines + Book Fees -->
-                                <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.25rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px dashed var(--border); padding-bottom: 0.75rem;">
                                     <div style="display: flex; align-items: center; gap: 0.75rem;">
                                         <div style="background: #fefce8; color: #ca8a04; width: 36px; height: 36px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">⚠️</div>
                                         <div>
@@ -934,6 +934,20 @@ $print_branch = $branch_id > 0 ? $branch_id : 1;
                                         </div>
                                     </div>
                                     <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);"><?php echo number_format($sum_5+$sum_6); ?> <span style="font-size: 0.775rem; font-weight: 500; color: var(--text-muted);">บาท</span></div>
+                                </div>
+
+                                <!-- Service Fees (serv_7) -->
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.25rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <div style="background: #ecfeff; color: #0891b2; width: 36px; height: 36px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">🧾</div>
+                                        <div>
+                                            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">ค่าบริการ</div>
+                                            <?php if ($branch_id == 0): ?>
+                                                <div style="font-size: 0.7rem; color: var(--text-muted);">ดก: <?php echo number_format($sum_7_dkt); ?> | ทว: <?php echo number_format($sum_7_twt); ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);"><?php echo number_format($sum_7); ?> <span style="font-size: 0.775rem; font-weight: 500; color: var(--text-muted);">บาท</span></div>
                                 </div>
                                 
                             </div>
