@@ -306,6 +306,7 @@ function log_payment_activity($pdo, $id_pay, $action, $reason = '', $old_data = 
         'REPRINT'        => 'พิมพ์ใบเสร็จซ้ำ',
         'CANCEL_REQUEST' => 'แจ้งขอยกเลิกบิล (รออนุมัติ)',
         'CANCEL_REJECT'  => 'ปฏิเสธคำขอยกเลิก (คืนสถานะบิล)',
+        'RESTORE'        => 'กู้คืนใบเสร็จที่ยกเลิก',
         'CANCEL'         => 'ยกเลิกใบเสร็จ'
     );
     $action_label = isset($action_labels[$action]) ? $action_labels[$action] : $action;

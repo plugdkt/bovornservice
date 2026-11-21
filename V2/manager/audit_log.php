@@ -320,8 +320,10 @@ $build_query = function($overrides = array()) {
         .timeline-item.act-CANCEL .timeline-dot { border-color: #ef4444; }
         .timeline-item.act-CANCEL_REQUEST .timeline-dot { border-color: #f59e0b; }
         .timeline-item.act-CANCEL_REJECT .timeline-dot { border-color: #3b82f6; }
+        .timeline-item.act-RESTORE .timeline-dot { border-color: #10b981; }
         .act-CANCEL_REQUEST { background: #fef3c7; color: #b45309; border: 1px solid #f59e0b; }
         .act-CANCEL_REJECT { background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; }
+        .act-RESTORE { background: #ecfdf5; color: #047857; border: 1px solid #6ee7b7; }
         .timeline-item.act-REPRINT .timeline-dot { border-color: #8b5cf6; }
         .timeline-item.act-CREATE .timeline-dot { border-color: #10b981; }
 
@@ -429,6 +431,7 @@ $build_query = function($overrides = array()) {
                                         <option value="CANCEL" <?php echo $action_sel === 'CANCEL' ? 'selected' : ''; ?>>🚫 มีการยกเลิกบิล (CANCEL)</option>
                                         <option value="CANCEL_REQUEST" <?php echo $action_sel === 'CANCEL_REQUEST' ? 'selected' : ''; ?>>⏳ แจ้งขอยกเลิกบิล (CANCEL_REQUEST)</option>
                                         <option value="CANCEL_REJECT" <?php echo $action_sel === 'CANCEL_REJECT' ? 'selected' : ''; ?>>↩️ ปฏิเสธคำขอยกเลิก (CANCEL_REJECT)</option>
+                                        <option value="RESTORE" <?php echo $action_sel === 'RESTORE' ? 'selected' : ''; ?>>♻️ กู้คืนใบเสร็จที่ยกเลิก (RESTORE)</option>
                                         <option value="REPRINT" <?php echo $action_sel === 'REPRINT' ? 'selected' : ''; ?>>🖨️ มีการพิมพ์ซ้ำ (REPRINT)</option>
                                         <option value="CREATE" <?php echo $action_sel === 'CREATE' ? 'selected' : ''; ?>>🟢 สร้างบิลใหม่ (CREATE)</option>
                                         <option value="PRINT" <?php echo $action_sel === 'PRINT' ? 'selected' : ''; ?>>🔵 พิมพ์บิลครั้งแรก (PRINT)</option>

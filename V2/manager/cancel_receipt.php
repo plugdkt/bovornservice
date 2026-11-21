@@ -72,6 +72,42 @@ if ($id_pay > 0) {
             $sep = (strpos($return_url, '?') !== false) ? '&' : '?';
             header("Location: " . $return_url . $sep . "cancel=rejected");
             exit;
+        } elseif ($action === 'restore_cancel') {
+            // Restore a cancelled bill (pay_status = 3) back to its original status (1 or 2)
+            $restore_status = 2;
+            try {
+                $stmt_log = $pdo->prepare("SELECT `old_data` FROM `payment_log` WHERE `id_pay` = :id_pay AND `action` IN ('CANCEL_REQUEST', 'CANCEL') ORDER BY `id_log` DESC");
+                $stmt_log->execute(array(':id_pay' => $id_pay));
+                $log_rows = $stmt_log->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($log_rows as $lr) {
+                    if (!empty($lr['old_data'])) {
+                        $decoded = json_decode($lr['old_data'], true);
+                        if (is_array($decoded) && isset($decoded['pay_status']) && in_array(intval($decoded['pay_status']), array(1, 2))) {
+                            $restore_status = intval($decoded['pay_status']);
+                            break;
+                        }
+                    }
+                }
+            } catch (\PDOException $e) {
+                // fallback to 2
+            }
+
+            if (empty($cancel_reason)) {
+                $cancel_reason = 'ผู้จัดการกู้คืนใบเสร็จที่ยกเลิกกลับเป็นสถานะปกติ';
+            }
+
+            $stmt = $pdo->prepare("UPDATE `payment` SET `pay_status` = :st WHERE `id_pay` = :id_pay AND `pay_status` = 3");
+            $stmt->execute(array(':st' => $restore_status, ':id_pay' => $id_pay));
+
+            if (function_exists('log_payment_activity')) {
+                $status_lbl = ($restore_status === 1) ? 'รอพิมพ์' : 'สำเร็จ/พิมพ์แล้ว';
+                $summary = "ผู้จัดการกู้คืนบิลที่ยกเลิก #" . $id_pay . ": " . $cus . " (" . $reg . ") ยอด " . $amt . " บ. กลับเป็นสถานะ [" . $status_lbl . "]";
+                log_payment_activity($pdo, $id_pay, 'RESTORE', $cancel_reason, $old_pay, array('pay_status' => $restore_status), $summary);
+            }
+
+            $sep = (strpos($return_url, '?') !== false) ? '&' : '?';
+            header("Location: " . $return_url . $sep . "cancel=restored");
+            exit;
         } elseif ($action === 'approve_cancel') {
             if (empty($cancel_reason)) {
                 $cancel_reason = 'ผู้จัดการอนุมัติคำขอยกเลิกจากพนักงาน';

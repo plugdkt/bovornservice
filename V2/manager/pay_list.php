@@ -597,6 +597,10 @@ $print_branch = $branch_id > 0 ? $branch_id : 1;
                         <div class="badge badge-warning" style="display: block; width: 100%; text-align: center; padding: 0.75rem; margin-bottom: 1.25rem; font-size: 0.875rem; border-radius: var(--radius-md); background:#eff6ff; color:#1d4ed8; border:1px solid #93c5fd;">
                             ↩️ ปฏิเสธคำขอยกเลิกและคืนสถานะใบเสร็จเป็นปกติแล้ว (ยอดกลับเข้าสู่รายงานรายวันแล้ว)
                         </div>
+                    <?php elseif ($_GET['cancel'] === 'restored'): ?>
+                        <div class="badge badge-success" style="display: block; width: 100%; text-align: center; padding: 0.75rem; margin-bottom: 1.25rem; font-size: 0.875rem; border-radius: var(--radius-md); background:#ecfdf5; color:#065f46; border:1px solid #10b981;">
+                            ↩️ กู้คืนใบเสร็จที่ยกเลิกกลับเป็นสถานะปกติเรียบร้อยแล้ว (ยอดกลับเข้าสู่รายงานรายวันแล้ว)
+                        </div>
                     <?php endif; ?>
                 <?php endif; ?>
 
@@ -1148,7 +1152,14 @@ $print_branch = $branch_id > 0 ? $branch_id : 1;
                                             </td>
                                             <td style="text-align: center; white-space: nowrap;" class="no-print">
                                                 <?php if ($is_cancelled): ?>
-                                                    <span style="color: #dc2626; font-weight: bold; font-size: 0.8rem;">ยกเลิกแล้ว</span>
+                                                    <span style="color: #dc2626; font-weight: bold; font-size: 0.78rem;">ยกเลิกแล้ว</span>
+                                                    <form method="POST" action="cancel_receipt.php" style="display:inline-block; margin-left:3px;" onsubmit="return confirm('ยืนยันกู้คืนบิล #<?php echo intval($p['id_pay']); ?> (<?php echo htmlspecialchars(isset($p['cus_name']) ? $p['cus_name'] : '', ENT_QUOTES); ?>) กลับเป็นสถานะปกติ?');">
+                                                        <?php echo csrf_field(); ?>
+                                                        <input type="hidden" name="id_pay" value="<?php echo intval($p['id_pay']); ?>">
+                                                        <input type="hidden" name="action" value="restore_cancel">
+                                                        <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
+                                                        <button type="submit" style="background:#ecfdf5; color:#047857; border:1px solid #6ee7b7; border-radius:4px; padding:1px 6px; font-size:0.75rem; font-weight:600; cursor:pointer;" title="กู้คืนบิลนี้กลับเป็นสถานะปกติ">↩️ กู้คืน</button>
+                                                    </form>
                                                 <?php elseif ($is_pending_cancel): ?>
                                                     <span style="color: #b45309; font-weight: 700; font-size: 0.78rem; background:#fde68a; padding:1px 6px; border-radius:4px;" title="พนักงานแจ้งขอยกเลิก รอผู้จัดการอนุมัติ">⏳ รออนุมัติ</span>
                                                 <?php else: ?>
