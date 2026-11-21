@@ -97,7 +97,7 @@ if ($day > 0 || $month > 0 || $year > 0) {
             $params[':branch_id'] = $branch_id;
         }
         
-        $conditions_sums = array_merge(["p.pay_status != 3"], $conditions_base);
+        $conditions_sums = array_merge(["p.pay_status NOT IN (3, 4)"], $conditions_base);
         $where_sql = implode(" AND ", $conditions_sums);
         $where_list_sql = !empty($conditions_base) ? implode(" AND ", $conditions_base) : "1=1";
         
@@ -289,6 +289,26 @@ if ($is_daily) {
             $closing_boxes[$cb_branch] = null;
         }
     }
+}
+
+// ── Pending Cancellation Requests from Staff (pay_status = 4) ──
+$pending_cancels = array();
+try {
+    $sql_pend = "SELECT p.id_pay, p.id_branch, p.cus_name, p.cus_phone, p.car_regis_id, p.pay_total,
+                        p.pay_day, p.pay_month, p.pay_year, p.pay_time,
+                        b.branch_name, pr.PROVINCE_NAME as province_name,
+                        (SELECT l.emp_name FROM `payment_log` l WHERE l.id_pay = p.id_pay AND l.action = 'CANCEL_REQUEST' ORDER BY l.id_log DESC LIMIT 1) AS req_emp_name,
+                        (SELECT l.reason FROM `payment_log` l WHERE l.id_pay = p.id_pay AND l.action = 'CANCEL_REQUEST' ORDER BY l.id_log DESC LIMIT 1) AS req_reason,
+                        (SELECT l.created_at FROM `payment_log` l WHERE l.id_pay = p.id_pay AND l.action = 'CANCEL_REQUEST' ORDER BY l.id_log DESC LIMIT 1) AS req_time
+                 FROM `payment` p
+                 LEFT JOIN `branch` b ON p.id_branch = b.id_branch
+                 LEFT JOIN `province` pr ON p.province_id = pr.PROVINCE_ID
+                 WHERE p.pay_status = 4
+                 ORDER BY p.id_pay DESC";
+    $stmt_pend = $pdo->query($sql_pend);
+    $pending_cancels = $stmt_pend->fetchAll(PDO::FETCH_ASSOC);
+} catch (\PDOException $e) {
+    error_log("Pending cancels fetch error: " . $e->getMessage());
 }
 
 // Date parameters for printing tax referral popup
@@ -564,9 +584,93 @@ $print_branch = $branch_id > 0 ? $branch_id : 1;
             </div>
             
             <div class="content-body">
-                <?php if (isset($_GET['cancel']) && $_GET['cancel'] === 'success'): ?>
-                    <div class="badge badge-success" style="display: block; width: 100%; text-align: center; padding: 0.75rem; margin-bottom: 1.5rem; font-size: 0.875rem; border-radius: var(--radius-md);">
-                        ยกเลิกใบเสร็จรับเงินเรียบร้อยแล้ว
+                <?php if (isset($_GET['cancel'])): ?>
+                    <?php if ($_GET['cancel'] === 'success'): ?>
+                        <div class="badge badge-success" style="display: block; width: 100%; text-align: center; padding: 0.75rem; margin-bottom: 1.25rem; font-size: 0.875rem; border-radius: var(--radius-md);">
+                            ✅ ยกเลิกใบเสร็จรับเงินเรียบร้อยแล้ว
+                        </div>
+                    <?php elseif ($_GET['cancel'] === 'approved'): ?>
+                        <div class="badge badge-success" style="display: block; width: 100%; text-align: center; padding: 0.75rem; margin-bottom: 1.25rem; font-size: 0.875rem; border-radius: var(--radius-md);">
+                            ✅ อนุมัติคำขอยกเลิกใบเสร็จจากพนักงานเรียบร้อยแล้ว (สถานะ: ยกเลิกถาวร)
+                        </div>
+                    <?php elseif ($_GET['cancel'] === 'rejected'): ?>
+                        <div class="badge badge-warning" style="display: block; width: 100%; text-align: center; padding: 0.75rem; margin-bottom: 1.25rem; font-size: 0.875rem; border-radius: var(--radius-md); background:#eff6ff; color:#1d4ed8; border:1px solid #93c5fd;">
+                            ↩️ ปฏิเสธคำขอยกเลิกและคืนสถานะใบเสร็จเป็นปกติแล้ว (ยอดกลับเข้าสู่รายงานรายวันแล้ว)
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+
+                <!-- ── PENDING CANCELLATION REQUESTS FROM EMPLOYEES ── -->
+                <?php if (!empty($pending_cancels)): ?>
+                    <div class="card" style="border: 2px solid #f59e0b; background: #fffbeb; margin-bottom: 1.5rem; padding: 1.15rem 1.35rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.85rem;">
+                            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #b45309; display: flex; align-items: center; gap: 0.5rem;">
+                                <span>⚠️</span> รายงานแจ้งขอยกเลิกรายการจากพนักงาน (รอตรวจสอบ <?php echo count($pending_cancels); ?> รายการ)
+                            </h3>
+                            <span style="font-size: 0.8rem; color: #92400e; background: #fef3c7; padding: 3px 10px; border-radius: 12px; font-weight: 600;">
+                                * ยอดเหล่านี้ถูกหักออกจากรายงานรายวันชั่วคราวแล้ว
+                            </span>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="table-report-detailed" style="font-size: 0.825rem; background: #fff;">
+                                <thead>
+                                    <tr>
+                                        <th style="background:#fde68a;">เลขบิล</th>
+                                        <th style="background:#fde68a;">สาขา</th>
+                                        <th style="background:#fde68a;">วันที่บิล</th>
+                                        <th style="background:#fde68a;">ลูกค้า / ทะเบียน</th>
+                                        <th style="background:#fde68a;">ยอดเงิน (บาท)</th>
+                                        <th style="background:#fde68a;">ผู้แจ้ง / เวลา</th>
+                                        <th style="background:#fde68a;">เหตุผลจากพนักงาน</th>
+                                        <th style="background:#fde68a; min-width: 175px;">การพิจารณา</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($pending_cancels as $pc): ?>
+                                        <tr>
+                                            <td style="text-align:center; font-weight:700; color:#b45309;">#<?php echo intval($pc['id_pay']); ?></td>
+                                            <td style="text-align:center; white-space:nowrap;"><?php echo htmlspecialchars($pc['branch_name']); ?></td>
+                                            <td style="text-align:center; white-space:nowrap; font-size:0.8rem;">
+                                                <?php echo sprintf('%02d/%02d/%04d', $pc['pay_day'], $pc['pay_month'], $pc['pay_year'] + 543); ?><br>
+                                                <span style="color:#64748b;"><?php echo substr($pc['pay_time'], 0, 5); ?> น.</span>
+                                            </td>
+                                            <td>
+                                                <div style="font-weight:700; color:#1e293b;"><?php echo htmlspecialchars($pc['cus_name']); ?></div>
+                                                <div style="font-size:0.78rem; color:#475569;"><?php echo htmlspecialchars($pc['car_regis_id'] . ' (' . $pc['province_name'] . ')'); ?></div>
+                                            </td>
+                                            <td style="text-align:right; font-weight:800; color:#dc2626; white-space:nowrap;">
+                                                <?php echo number_format($pc['pay_total']); ?>
+                                            </td>
+                                            <td style="font-size:0.8rem; white-space:nowrap;">
+                                                <div style="font-weight:600; color:#1e293b;"><?php echo htmlspecialchars(!empty($pc['req_emp_name']) ? $pc['req_emp_name'] : 'พนักงาน'); ?></div>
+                                                <div style="font-size:0.75rem; color:#64748b;"><?php echo !empty($pc['req_time']) ? htmlspecialchars($pc['req_time']) : '-'; ?></div>
+                                            </td>
+                                            <td style="max-width:240px; color:#92400e; font-weight:500;">
+                                                <?php echo htmlspecialchars(!empty($pc['req_reason']) ? $pc['req_reason'] : '-'); ?>
+                                            </td>
+                                            <td style="text-align:center; white-space:nowrap;">
+                                                <form method="POST" action="cancel_receipt.php" style="display:inline-block; margin-right:4px;" onsubmit="return confirm('ยืนยันอนุมัติยกเลิกบิล #<?php echo intval($pc['id_pay']); ?> ถาวร?');">
+                                                    <?php echo csrf_field(); ?>
+                                                    <input type="hidden" name="id_pay" value="<?php echo intval($pc['id_pay']); ?>">
+                                                    <input type="hidden" name="action" value="approve_cancel">
+                                                    <input type="hidden" name="cancel_reason" value="อนุมัติคำขอยกเลิกจากพนักงาน: <?php echo htmlspecialchars(!empty($pc['req_reason']) ? $pc['req_reason'] : '', ENT_QUOTES); ?>">
+                                                    <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
+                                                    <button type="submit" class="btn btn-danger btn-sm" style="padding:4px 9px; font-size:0.78rem; font-weight:700;">✅ อนุมัติยกเลิก</button>
+                                                </form>
+                                                <form method="POST" action="cancel_receipt.php" style="display:inline-block;" onsubmit="return confirm('ปฏิเสธคำขอยกเลิกและคืนสถานะบิล #<?php echo intval($pc['id_pay']); ?> กลับเป็นปกติ?');">
+                                                    <?php echo csrf_field(); ?>
+                                                    <input type="hidden" name="id_pay" value="<?php echo intval($pc['id_pay']); ?>">
+                                                    <input type="hidden" name="action" value="reject_cancel">
+                                                    <input type="hidden" name="cancel_reason" value="ผู้จัดการปฏิเสธคำขอยกเลิกและคืนสถานะบิลเป็นปกติ">
+                                                    <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
+                                                    <button type="submit" class="btn btn-secondary btn-sm" style="padding:4px 9px; font-size:0.78rem; font-weight:600; background:#eff6ff; color:#1d4ed8; border-color:#93c5fd;">↩️ คืนบิล</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 <?php endif; ?>
                 
@@ -998,8 +1102,10 @@ $print_branch = $branch_id > 0 ? $branch_id : 1;
                                     else:
                                         $idx = $offset + 1; 
                                         foreach ($payments as $p): 
-                                            $is_cancelled = (isset($p['pay_status']) ? intval($p['pay_status']) : 0) === 3;
-                                            $row_style = $is_cancelled ? 'style="background-color: #fee2e2; color: #991b1b;"' : '';
+                                            $p_st = isset($p['pay_status']) ? intval($p['pay_status']) : 0;
+                                            $is_cancelled = ($p_st === 3);
+                                            $is_pending_cancel = ($p_st === 4);
+                                            $row_style = $is_cancelled ? 'style="background-color: #fee2e2; color: #991b1b;"' : ($is_pending_cancel ? 'style="background-color: #fef3c7; color: #92400e;"' : '');
                                     ?>
                                         <tr <?php echo $row_style; ?>>
                                             <td style="text-align: center; font-size: 0.85rem;"><?php echo $idx++; ?></td>
@@ -1029,6 +1135,8 @@ $print_branch = $branch_id > 0 ? $branch_id : 1;
                                             <td style="text-align: center; white-space: nowrap;" class="no-print">
                                                 <?php if ($is_cancelled): ?>
                                                     <span style="color: #dc2626; font-weight: bold; font-size: 0.8rem;">ยกเลิกแล้ว</span>
+                                                <?php elseif ($is_pending_cancel): ?>
+                                                    <span style="color: #b45309; font-weight: 700; font-size: 0.78rem; background:#fde68a; padding:1px 6px; border-radius:4px;" title="พนักงานแจ้งขอยกเลิก รอผู้จัดการอนุมัติ">⏳ รออนุมัติ</span>
                                                 <?php else: ?>
                                                     <a href="javascript:void(0)" onclick="openCancelModal(<?php echo $p['id_pay']; ?>, '<?php echo htmlspecialchars(isset($p['cus_name']) ? $p['cus_name'] : '', ENT_QUOTES); ?>', <?php echo floatval($p['pay_total']); ?>)" 
                                                        style="color: #2563eb; text-decoration: none; font-size: 0.85rem; font-weight: 500;" title="ยกเลิกใบเสร็จ">ยกเลิก</a>

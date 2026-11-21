@@ -44,7 +44,7 @@ try {
            AND p.pay_month = :month
            AND p.pay_year  = :year
            AND p.id_branch = :branch
-           AND p.pay_status != 3
+           AND p.pay_status NOT IN (3, 4)
            AND (p.serv_3 > 0 OR p.serv_4 > 0 OR p.serv_5 > 0 OR p.serv_6 > 0)
          ORDER BY p.id_pay ASC"
     );

@@ -20,7 +20,7 @@ function daily_closing_totals($pdo, $day, $month, $year_ad, $id_branch) {
             COALESCE(SUM(serv_7), 0) AS serv_7, COALESCE(SUM(discount), 0) AS discount, COALESCE(SUM(pay_total), 0) AS total,
             COALESCE(SUM(CASE pay_type WHEN 2 THEN 0 WHEN 3 THEN pay_cash ELSE pay_total END), 0) AS cash,
             COALESCE(SUM(CASE pay_type WHEN 2 THEN pay_total WHEN 3 THEN pay_transfer ELSE 0 END), 0) AS transfer
-        FROM `payment` WHERE $where AND pay_status != 3");
+        FROM `payment` WHERE $where AND pay_status NOT IN (3, 4)");
     $stmt->execute($params);
     $t = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -29,7 +29,7 @@ function daily_closing_totals($pdo, $day, $month, $year_ad, $id_branch) {
             COALESCE(SUM(serv_3 + serv_4 + serv_5 + serv_6), 0) AS tax_total,
             COALESCE(SUM(id_car_type <> 4), 0) AS cars,
             COALESCE(SUM(id_car_type = 4), 0) AS motorcycles
-        FROM `payment` WHERE $where AND pay_status != 3
+        FROM `payment` WHERE $where AND pay_status NOT IN (3, 4)
           AND (serv_3 > 0 OR serv_4 > 0 OR serv_5 > 0 OR serv_6 > 0)");
     $stmt->execute($params);
     $t += $stmt->fetch(PDO::FETCH_ASSOC);
@@ -37,6 +37,10 @@ function daily_closing_totals($pdo, $day, $month, $year_ad, $id_branch) {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM `payment` WHERE $where AND pay_status = 3");
     $stmt->execute($params);
     $t['cancelled'] = (int)$stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM `payment` WHERE $where AND pay_status = 4");
+    $stmt->execute($params);
+    $t['pending_cancel'] = (int)$stmt->fetchColumn();
 
     // Fetch saved other expenses from daily_expense table
     $exp_date_sql = sprintf('%04d-%02d-%02d', $year_ad, $month, $day);

@@ -318,6 +318,10 @@ $build_query = function($overrides = array()) {
         }
         .timeline-item.act-EDIT .timeline-dot { border-color: #f59e0b; }
         .timeline-item.act-CANCEL .timeline-dot { border-color: #ef4444; }
+        .timeline-item.act-CANCEL_REQUEST .timeline-dot { border-color: #f59e0b; }
+        .timeline-item.act-CANCEL_REJECT .timeline-dot { border-color: #3b82f6; }
+        .act-CANCEL_REQUEST { background: #fef3c7; color: #b45309; border: 1px solid #f59e0b; }
+        .act-CANCEL_REJECT { background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; }
         .timeline-item.act-REPRINT .timeline-dot { border-color: #8b5cf6; }
         .timeline-item.act-CREATE .timeline-dot { border-color: #10b981; }
 
@@ -423,6 +427,8 @@ $build_query = function($overrides = array()) {
                                         <option value="ALL" <?php echo $action_sel === 'ALL' ? 'selected' : ''; ?>>ทั้งหมดทุกกิจกรรม</option>
                                         <option value="EDIT" <?php echo $action_sel === 'EDIT' ? 'selected' : ''; ?>>✏️ มีการแก้ไขข้อมูล (EDIT)</option>
                                         <option value="CANCEL" <?php echo $action_sel === 'CANCEL' ? 'selected' : ''; ?>>🚫 มีการยกเลิกบิล (CANCEL)</option>
+                                        <option value="CANCEL_REQUEST" <?php echo $action_sel === 'CANCEL_REQUEST' ? 'selected' : ''; ?>>⏳ แจ้งขอยกเลิกบิล (CANCEL_REQUEST)</option>
+                                        <option value="CANCEL_REJECT" <?php echo $action_sel === 'CANCEL_REJECT' ? 'selected' : ''; ?>>↩️ ปฏิเสธคำขอยกเลิก (CANCEL_REJECT)</option>
                                         <option value="REPRINT" <?php echo $action_sel === 'REPRINT' ? 'selected' : ''; ?>>🖨️ มีการพิมพ์ซ้ำ (REPRINT)</option>
                                         <option value="CREATE" <?php echo $action_sel === 'CREATE' ? 'selected' : ''; ?>>🟢 สร้างบิลใหม่ (CREATE)</option>
                                         <option value="PRINT" <?php echo $action_sel === 'PRINT' ? 'selected' : ''; ?>>🔵 พิมพ์บิลครั้งแรก (PRINT)</option>
@@ -684,6 +690,7 @@ $build_query = function($overrides = array()) {
                         var statusStr = '<span class="badge" style="background:#e0f2fe; color:#0369a1;">ร่างบิล (Draft)</span>';
                         if (p.pay_status == 2) statusStr = '<span class="badge badge-success">พิมพ์แล้ว (Completed)</span>';
                         if (p.pay_status == 3) statusStr = '<span class="badge badge-danger">ยกเลิกแล้ว (Cancelled)</span>';
+                        if (p.pay_status == 4) statusStr = '<span class="badge" style="background:#fef3c7;color:#b45309;border:1px solid #f59e0b;">รออนุมัติยกเลิก (Pending Cancel)</span>';
 
                         var overviewHtml = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">' +
                             '<div><strong>ลูกค้า:</strong> ' + (p.cus_name || '-') + ' (' + (p.cus_phone || '-') + ')</div>' +

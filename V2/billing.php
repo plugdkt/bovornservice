@@ -668,6 +668,8 @@ try {
                                                     <span class="badge badge-warning" style="font-size: 0.75rem; padding: 3px 8px;">รอดำเนินการพิมพ์</span>
                                                 <?php elseif ($tp['pay_status'] == 2): ?>
                                                     <span class="badge badge-success" style="font-size: 0.75rem; padding: 3px 8px;">พิมพ์บิลแล้ว</span>
+                                                <?php elseif ($tp['pay_status'] == 4): ?>
+                                                    <span class="badge" style="background-color: #fef3c7; color: #b45309; border: 1px solid #f59e0b; font-size: 0.75rem; padding: 3px 8px; font-weight: 600;">⏳ รออนุมัติยกเลิก</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center no-print" style="display: flex; gap: 0.45rem; justify-content: center; align-items: center;">

@@ -49,7 +49,7 @@ if ($day > 0 || $month > 0 || $year > 0 || !empty($q)) {
     try {
         // Condition: Exclude cancelled bills (pay_status = 3) and must have inspection fee or inspection number
         $conditions = [
-            "p.pay_status != 3",
+            "p.pay_status NOT IN (3, 4)",
             "(p.serv_2 > 0 OR (p.serv_2_1 IS NOT NULL AND TRIM(p.serv_2_1) != ''))"
         ];
         $params = [];

@@ -73,7 +73,7 @@ $sum_serv_2_dkt = 0;
 $sum_serv_2_twt = 0;
 
 try {
-    $conditions = ["p.pay_status != 3", "p.serv_2 != 0"];
+    $conditions = ["p.pay_status NOT IN (3, 4)", "p.serv_2 != 0"];
     $params = [];
     
     if ($day > 0 && $day2 == 0) {

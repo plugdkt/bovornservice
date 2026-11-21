@@ -300,11 +300,13 @@ function log_payment_activity($pdo, $id_pay, $action, $reason = '', $old_data = 
     }
     
     $action_labels = array(
-        'CREATE'  => 'สร้างบิลใหม่',
-        'EDIT'    => 'แก้ไขข้อมูลบิล',
-        'PRINT'   => 'พิมพ์ใบเสร็จ (ครั้งแรก)',
-        'REPRINT' => 'พิมพ์ใบเสร็จซ้ำ',
-        'CANCEL'  => 'ยกเลิกใบเสร็จ'
+        'CREATE'         => 'สร้างบิลใหม่',
+        'EDIT'           => 'แก้ไขข้อมูลบิล',
+        'PRINT'          => 'พิมพ์ใบเสร็จ (ครั้งแรก)',
+        'REPRINT'        => 'พิมพ์ใบเสร็จซ้ำ',
+        'CANCEL_REQUEST' => 'แจ้งขอยกเลิกบิล (รออนุมัติ)',
+        'CANCEL_REJECT'  => 'ปฏิเสธคำขอยกเลิก (คืนสถานะบิล)',
+        'CANCEL'         => 'ยกเลิกใบเสร็จ'
     );
     $action_label = isset($action_labels[$action]) ? $action_labels[$action] : $action;
 

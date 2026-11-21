@@ -22,6 +22,16 @@ foreach ($words as $w) {
     $initials .= mb_substr($w, 0, 1, 'UTF-8');
 }
 $initials = mb_substr($initials, 0, 2, 'UTF-8');
+
+// Count pending cancellation requests for Manager notification badge
+$sidebar_pending_cancels = 0;
+if (isset($_SESSION['id_emp_type']) && $_SESSION['id_emp_type'] == 1 && isset($pdo)) {
+    try {
+        $sidebar_pending_cancels = (int)$pdo->query("SELECT COUNT(*) FROM `payment` WHERE `pay_status` = 4")->fetchColumn();
+    } catch (\Exception $e) {
+        $sidebar_pending_cancels = 0;
+    }
+}
 ?>
 
 <div class="sidebar">
@@ -42,7 +52,7 @@ $initials = mb_substr($initials, 0, 2, 'UTF-8');
             </li>
             <li class="sidebar-item <?php echo ($current_page === 'pay_list.php') ? 'active' : ''; ?>">
                 <a href="<?php echo $manager_prefix; ?>pay_list.php">
-                    <span>📊</span> รายงานการขาย
+                    <span>📊</span> รายงานการขาย<?php if ($sidebar_pending_cancels > 0): ?> <span style="background:#ef4444; color:#fff; font-size:11px; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:4px;"><?php echo $sidebar_pending_cancels; ?></span><?php endif; ?>
                 </a>
             </li>
             <li class="sidebar-item <?php echo ($current_page === 'audit_log.php') ? 'active' : ''; ?>">

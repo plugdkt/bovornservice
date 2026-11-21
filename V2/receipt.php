@@ -28,6 +28,10 @@ try {
         http_response_code(403);
         die("ข้อผิดพลาด: ใบเสร็จนี้ถูกยกเลิกไปแล้ว ไม่สามารถพิมพ์ได้");
     }
+    if ($pay['pay_status'] == 4) {
+        http_response_code(403);
+        die("ข้อผิดพลาด: ใบเสร็จนี้ถูกแจ้งขอยกเลิกและกำลังรอผู้จัดการอนุมัติ ไม่สามารถพิมพ์ได้");
+    }
 
     $is_manager = ($_SESSION['id_emp_type'] == 1);
     $is_reprint = false;

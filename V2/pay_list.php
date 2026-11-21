@@ -25,9 +25,10 @@ if ($filter_type === 'today') {
     $year  = isset($_GET['year'])  ? intval($_GET['year'])  : (date('Y') + 543);
 }
 
-$payments = []; $total_records = 0; $total_pages = 0; $page = 1; $limit = 20;
+$payments = []; $total_records = 0; $active_records = 0; $total_pages = 0; $page = 1; $limit = 20;
 $total_sum = $sum_1 = $sum_2 = $sum_3 = $sum_4 = $sum_5 = $sum_6 = $sum_7 = $sum_disc = 0;
 $cash_sum = $transfer_sum = 0;
+$pending_cancel_count = 0; $pending_cancel_sum = 0;
 
 $months_th = [
     1=>'มกราคม',2=>'กุมภาพันธ์',3=>'มีนาคม',4=>'เมษายน',
@@ -37,28 +38,33 @@ $months_th = [
 
 if ($day > 0 || $month > 0 || $year > 0) {
     try {
-        $conditions = ["p.id_branch = :id_branch", "p.pay_status != 3"];
+        $conditions_base = ["p.id_branch = :id_branch"];
         $params = [':id_branch' => $id_branch];
 
-        if ($day > 0 && $day2 == 0)       { $conditions[] = "p.pay_day = :day";  $params[':day'] = $day; }
-        elseif ($day > 0 && $day2 > 0)    { $conditions[] = "p.pay_day >= :day AND p.pay_day <= :day2"; $params[':day'] = $day; $params[':day2'] = $day2; }
-        if ($month > 0)                    { $conditions[] = "p.pay_month = :month"; $params[':month'] = $month; }
-        if ($year > 0)                     { $conditions[] = "p.pay_year = :year";  $params[':year'] = $year - 543; }
+        if ($day > 0 && $day2 == 0)       { $conditions_base[] = "p.pay_day = :day";  $params[':day'] = $day; }
+        elseif ($day > 0 && $day2 > 0)    { $conditions_base[] = "p.pay_day >= :day AND p.pay_day <= :day2"; $params[':day'] = $day; $params[':day2'] = $day2; }
+        if ($month > 0)                    { $conditions_base[] = "p.pay_month = :month"; $params[':month'] = $month; }
+        if ($year > 0)                     { $conditions_base[] = "p.pay_year = :year";  $params[':year'] = $year - 543; }
 
-        $where_sql = implode(" AND ", $conditions);
+        // Sums exclude BOTH cancelled (3) AND pending-cancellation (4) so daily reports deduct them immediately
+        $where_sums_sql = implode(" AND ", array_merge(["p.pay_status NOT IN (3, 4)"], $conditions_base));
+        // List includes active (1, 2) AND pending-cancellation (4) so staff can see pending status
+        $where_list_sql = implode(" AND ", array_merge(["p.pay_status != 3"], $conditions_base));
+        // Pending cancellation count & sum for this period
+        $where_pend_sql = implode(" AND ", array_merge(["p.pay_status = 4"], $conditions_base));
 
-        $sums_res = $pdo->prepare("SELECT COUNT(*) as total_records,
+        $sums_res = $pdo->prepare("SELECT COUNT(*) as active_records,
             SUM(p.serv_1) as sum_1, SUM(p.serv_2) as sum_2, SUM(p.serv_3) as sum_3,
             SUM(p.serv_4) as sum_4, SUM(p.serv_5) as sum_5, SUM(p.serv_6) as sum_6,
             SUM(p.serv_7) as sum_7, SUM(p.discount) as sum_disc, SUM(p.pay_total) as total_sum,
-            SUM(COALESCE(p.pay_cash, 0)) as cash_sum,
-            SUM(COALESCE(p.pay_transfer, 0)) as transfer_sum
-            FROM `payment` p WHERE $where_sql");
+            SUM(CASE p.pay_type WHEN 2 THEN 0 WHEN 3 THEN COALESCE(p.pay_cash, 0) ELSE p.pay_total END) as cash_sum,
+            SUM(CASE p.pay_type WHEN 2 THEN p.pay_total WHEN 3 THEN COALESCE(p.pay_transfer, 0) ELSE 0 END) as transfer_sum
+            FROM `payment` p WHERE $where_sums_sql");
         $sums_res->execute($params);
         $sr = $sums_res->fetch(PDO::FETCH_ASSOC);
 
         if ($sr) {
-            $total_records = intval($sr['total_records']);
+            $active_records = intval($sr['active_records']);
             $sum_1 = floatval($sr['sum_1']); $sum_2 = floatval($sr['sum_2']);
             $sum_3 = floatval($sr['sum_3']); $sum_4 = floatval($sr['sum_4']);
             $sum_5 = floatval($sr['sum_5']); $sum_6 = floatval($sr['sum_6']);
@@ -67,6 +73,18 @@ if ($day > 0 || $month > 0 || $year > 0) {
             $cash_sum = floatval($sr['cash_sum']);
             $transfer_sum = floatval($sr['transfer_sum']);
         }
+
+        $pend_res = $pdo->prepare("SELECT COUNT(*) as cnt, COALESCE(SUM(p.pay_total), 0) as total_pend FROM `payment` p WHERE $where_pend_sql");
+        $pend_res->execute($params);
+        $pr_row = $pend_res->fetch(PDO::FETCH_ASSOC);
+        if ($pr_row) {
+            $pending_cancel_count = intval($pr_row['cnt']);
+            $pending_cancel_sum   = floatval($pr_row['total_pend']);
+        }
+
+        $cnt_res = $pdo->prepare("SELECT COUNT(*) FROM `payment` p WHERE $where_list_sql");
+        $cnt_res->execute($params);
+        $total_records = intval($cnt_res->fetchColumn());
 
         $total_pages = ceil($total_records / $limit);
         $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
@@ -79,7 +97,7 @@ if ($day > 0 || $month > 0 || $year > 0) {
             JOIN `branch` b  ON p.id_branch   = b.id_branch
             JOIN `car_type` c ON p.id_car_type = c.id_car_type
             JOIN `province` pr ON p.province_id = pr.PROVINCE_ID
-            WHERE $where_sql ORDER BY p.id_pay DESC LIMIT :limit OFFSET :offset");
+            WHERE $where_list_sql ORDER BY p.id_pay DESC LIMIT :limit OFFSET :offset");
         foreach ($params as $k => $v) $stmt->bindValue($k, $v);
         $stmt->bindValue(':limit',  $limit,  PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
@@ -278,6 +296,24 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
     color: var(--primary);
     transition: var(--transition);
     white-space: nowrap;
+}
+.btn-req-cancel {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+    white-space: nowrap;
+}
+.btn-req-cancel:hover {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
 }
 .btn-inspect:hover { background: var(--primary); color: #fff; }
 
@@ -532,11 +568,37 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                 </span>
             </div>
 
+            <?php if (isset($_GET['cancel_req'])): ?>
+                <?php if ($_GET['cancel_req'] === 'success'): ?>
+                    <div style="background:#ecfdf5; border:1px solid #10b981; color:#065f46; padding:0.85rem 1.25rem; border-radius:10px; margin-bottom:1rem; font-size:0.9rem; font-weight:600; display:flex; align-items:center; gap:0.5rem;">
+                        <span>✅</span> ส่งรายงานแจ้งยกเลิกรายการให้ผู้จัดการเรียบร้อยแล้ว — ระบบได้หักยอดบิลนี้ออกจากรายงานรายวันแล้ว
+                    </div>
+                <?php elseif ($_GET['cancel_req'] === 'missing_reason'): ?>
+                    <div style="background:#fef2f2; border:1px solid #ef4444; color:#991b1b; padding:0.85rem 1.25rem; border-radius:10px; margin-bottom:1rem; font-size:0.9rem; font-weight:600;">
+                        ⚠️ กรุณาระบุเหตุผลการแจ้งยกเลิกก่อนยืนยัน
+                    </div>
+                <?php elseif ($_GET['cancel_req'] === 'already'): ?>
+                    <div style="background:#fffbeb; border:1px solid #f59e0b; color:#92400e; padding:0.85rem 1.25rem; border-radius:10px; margin-bottom:1rem; font-size:0.9rem; font-weight:600;">
+                        ℹ️ รายการนี้ถูกแจ้งยกเลิกหรือยกเลิกไปแล้ว
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+
+            <?php if ($pending_cancel_count > 0): ?>
+                <div style="background:#fffbeb; border:1px solid #f59e0b; color:#92400e; padding:0.75rem 1.15rem; border-radius:10px; margin-bottom:1rem; font-size:0.875rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                    <div>
+                        <strong>⏳ รายการแจ้งยกเลิกรอผู้จัดการอนุมัติ:</strong>
+                        จำนวน <strong><?php echo number_format($pending_cancel_count); ?></strong> รายการ
+                        (ยอดรวม <strong><?php echo number_format($pending_cancel_sum); ?></strong> บาท — <em>หักออกจากยอดรายงานรายวันนี้แล้ว</em>)
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <!-- ── Summary Metrics ── -->
             <div class="metrics-grid">
                 <?php
                 $metrics = [
-                    ['💼', 'จำนวนรายการ',        number_format($total_records), 'รายการ', '#eff6ff', '#2563eb'],
+                    ['💼', 'จำนวนรายการ (ใช้งาน)', number_format($active_records), 'รายการ', '#eff6ff', '#2563eb'],
                     ['📋', 'ค่า พ.ร.บ.',          number_format($sum_1),         'บาท',    '#f0fdf4', '#16a34a'],
                     ['🔍', 'ค่าตรวจสภาพ (ตรอ.)', number_format($sum_2),         'บาท',    '#fff7ed', '#ea580c'],
                     ['🏛️', 'ค่าภาษี (รวม)',       number_format($sum_3+$sum_4),  'บาท',    '#fdf4ff', '#9333ea'],
@@ -579,11 +641,13 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                             </tr>
                         </thead>
                         <tbody>
-                            <?php $idx = $offset + 1; foreach ($payments as $p): ?>
-                            <tr>
+                            <?php $idx = $offset + 1; foreach ($payments as $p):
+                                $is_pending_cancel = (intval($p['pay_status']) === 4);
+                            ?>
+                            <tr <?php echo $is_pending_cancel ? 'style="background-color:#fffbeb;"' : ''; ?>>
                                 <td class="center" style="color:var(--text-muted); font-size:0.8rem;"><?php echo $idx++; ?></td>
                                 <td>
-                                    <div style="font-weight:700; font-size:0.875rem;"><?php echo htmlspecialchars($p['cus_name']); ?></div>
+                                    <div style="font-weight:700; font-size:0.875rem; <?php echo $is_pending_cancel ? 'text-decoration:line-through; color:#92400e;' : ''; ?>"><?php echo htmlspecialchars($p['cus_name']); ?></div>
                                     <div style="font-size:0.75rem; color:var(--text-muted);"><?php echo htmlspecialchars($p['cus_phone']); ?></div>
                                 </td>
                                 <td class="center"><span class="plate-pill"><?php echo htmlspecialchars($p['car_regis_id']); ?></span></td>
@@ -592,7 +656,14 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                                     <?php echo sprintf('%02d/%02d', $p['pay_day'], $p['pay_month']); ?><br>
                                     <span style="font-size:0.72rem;"><?php echo substr($p['pay_time'],0,5); ?> น.</span>
                                 </td>
-                                <td class="num" style="color:var(--primary); font-weight:700; font-size:0.95rem;"><?php echo number_format($p['pay_total']); ?></td>
+                                <td class="num" style="color:<?php echo $is_pending_cancel ? '#b45309' : 'var(--primary)'; ?>; font-weight:700; font-size:0.95rem;">
+                                    <?php if ($is_pending_cancel): ?>
+                                        <span style="text-decoration:line-through;"><?php echo number_format($p['pay_total']); ?></span>
+                                        <div style="font-size:0.7rem; color:#d97706; font-weight:600;">(หักยอดแล้ว)</div>
+                                    <?php else: ?>
+                                        <?php echo number_format($p['pay_total']); ?>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="center">
                                     <?php
                                     $pt = isset($p['pay_type']) ? intval($p['pay_type']) : 1;
@@ -609,17 +680,24 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                                         <span class="status-pill status-draft">⏳ รอพิมพ์</span>
                                     <?php elseif ($p['pay_status']==2): ?>
                                         <span class="status-pill status-completed">✅ สำเร็จ</span>
+                                    <?php elseif ($p['pay_status']==4): ?>
+                                        <span class="status-pill" style="background:#fef3c7; color:#b45309; border:1px solid #f59e0b;">⏳ รออนุมัติยกเลิก</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="center">
-                                    <button class="btn-inspect" onclick="showDetails(<?php echo $p['id_pay']; ?>)">🔎 ดูรายละเอียด</button>
+                                <td class="center" style="white-space:nowrap;">
+                                    <div style="display:inline-flex; gap:0.35rem; align-items:center;">
+                                        <button class="btn-inspect" onclick="showDetails(<?php echo $p['id_pay']; ?>)">🔎 รายละเอียด</button>
+                                        <?php if (!$is_pending_cancel): ?>
+                                            <button type="button" class="btn-req-cancel" onclick="openCancelReqModal(<?php echo $p['id_pay']; ?>, '<?php echo htmlspecialchars($p['cus_name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($p['car_regis_id'], ENT_QUOTES); ?>', <?php echo floatval($p['pay_total']); ?>)">🚫 แจ้งยกเลิก</button>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="6" style="text-align:right; font-size:0.85rem; opacity:0.85;">รวมทั้งหมด (<?php echo number_format($total_records); ?> รายการ) | เงินสด: <?php echo number_format($cash_sum); ?> บาท | เงินโอน: <?php echo number_format($transfer_sum); ?> บาท</td>
+                                <td colspan="6" style="text-align:right; font-size:0.85rem; opacity:0.85;">รวมยอดสุทธิใช้งาน (<?php echo number_format($active_records); ?> รายการ<?php echo $pending_cancel_count > 0 ? ' · หักรออนุมัติยกเลิก ' . number_format($pending_cancel_count) . ' รายการ' : ''; ?>) | เงินสด: <?php echo number_format($cash_sum); ?> บาท | เงินโอน: <?php echo number_format($transfer_sum); ?> บาท</td>
                                 <td class="num" style="color:#bfdbfe; font-size:1rem;"><?php echo number_format($total_sum); ?></td>
                                 <td colspan="2"></td>
                             </tr>
@@ -830,6 +908,55 @@ function closeModal() {
 document.getElementById('txModal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
 });
+
+function openCancelReqModal(idPay, cusName, carRegis, amount) {
+    document.getElementById('cancelReqIdPay').value = idPay;
+    document.getElementById('cancelReqBillNo').textContent = '#' + idPay;
+    document.getElementById('cancelReqCusName').textContent = cusName || '-';
+    document.getElementById('cancelReqPlate').textContent = carRegis || '-';
+    document.getElementById('cancelReqAmount').textContent = Number(amount || 0).toLocaleString('th-TH', {minimumFractionDigits: 2});
+    document.getElementById('cancel_req_reason').value = '';
+    document.getElementById('cancelReqModal').style.display = 'flex';
+    setTimeout(function() { document.getElementById('cancel_req_reason').focus(); }, 100);
+}
+
+function closeCancelReqModal() {
+    document.getElementById('cancelReqModal').style.display = 'none';
+}
 </script>
+
+<!-- ── Employee Cancel Request Modal ── -->
+<div id="cancelReqModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:1100; justify-content:center; align-items:center; padding:1rem; backdrop-filter:blur(3px);">
+    <div style="background:#ffffff; border-radius:14px; width:100%; max-width:480px; padding:1.5rem; box-shadow:0 20px 30px rgba(0,0,0,0.2); border-top:5px solid #f59e0b;">
+        <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem; font-weight:700; color:#b45309; display:flex; align-items:center; gap:0.45rem;">
+            <span>🚫</span> แจ้งยกเลิกรายการขาย (ส่งรายงานให้ผู้จัดการ)
+        </h3>
+        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:0.75rem 1rem; margin-bottom:1rem; font-size:0.85rem; color:#78350f; line-height:1.5;">
+            <div><strong>เลขที่บิล:</strong> <span id="cancelReqBillNo" style="color:#dc2626; font-weight:700;"></span></div>
+            <div><strong>ลูกค้า:</strong> <span id="cancelReqCusName"></span> &nbsp;|&nbsp; <strong>ทะเบียน:</strong> <span id="cancelReqPlate"></span></div>
+            <div><strong>ยอดเงิน:</strong> <span id="cancelReqAmount" style="color:#dc2626; font-weight:700;"></span> บาท</div>
+        </div>
+        <p style="font-size:0.82rem; color:#475569; margin:0 0 0.85rem 0; line-height:1.45;">
+            ℹ️ เมื่อกดยืนยัน ระบบจะ<strong>หักยอดบิลนี้ออกจากรายงานรายวันทันที</strong> และส่งรายงานแจ้งผู้จัดการเพื่อตรวจสอบอนุมัติยกเลิกต่อไป
+        </p>
+        <form method="POST" action="request_cancel.php" id="cancelReqForm">
+            <?php echo csrf_field(); ?>
+            <input type="hidden" name="id_pay" id="cancelReqIdPay" value="">
+            <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
+            <div style="margin-bottom:1rem;">
+                <label for="cancel_req_reason" style="display:block; font-size:0.85rem; font-weight:700; color:#1e293b; margin-bottom:0.35rem;">
+                    ระบุเหตุผลการแจ้งยกเลิก <span style="color:#dc2626;">*</span>
+                </label>
+                <textarea name="cancel_reason" id="cancel_req_reason" rows="3" required
+                          placeholder="เช่น ออกบิลซ้ำ, พิมพ์ยอดเงินผิด, ลูกค้าเปลี่ยนใจยกเลิกบริการ..."
+                          style="width:100%; padding:0.65rem 0.8rem; border:1px solid #cbd5e1; border-radius:8px; font-family:inherit; font-size:0.88rem; resize:vertical; box-sizing:border-box;"></textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                <button type="button" onclick="closeCancelReqModal()" class="btn btn-secondary" style="padding:0.5rem 1rem; font-size:0.875rem;">ปิดหน้าต่าง</button>
+                <button type="submit" class="btn btn-danger" style="padding:0.5rem 1.15rem; font-size:0.875rem; font-weight:700;">ยืนยันแจ้งยกเลิก &amp; ส่งผู้จัดการ</button>
+            </div>
+        </form>
+    </div>
+</div>
 </body>
 </html>
