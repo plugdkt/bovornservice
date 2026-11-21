@@ -48,8 +48,8 @@ if ($day > 0 || $month > 0 || $year > 0) {
 
         // Sums exclude BOTH cancelled (3) AND pending-cancellation (4) so daily reports deduct them immediately
         $where_sums_sql = implode(" AND ", array_merge(["p.pay_status NOT IN (3, 4)"], $conditions_base));
-        // List includes active (1, 2) AND pending-cancellation (4) so staff can see pending status
-        $where_list_sql = implode(" AND ", array_merge(["p.pay_status != 3"], $conditions_base));
+        // List includes all statuses (1=Draft, 2=Printed, 3=Cancelled, 4=Pending Cancel) so staff can see cancelled bills
+        $where_list_sql = implode(" AND ", $conditions_base);
         // Pending cancellation count & sum for this period
         $where_pend_sql = implode(" AND ", array_merge(["p.pay_status = 4"], $conditions_base));
 
@@ -646,12 +646,17 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                         </thead>
                         <tbody>
                             <?php $idx = $offset + 1; foreach ($payments as $p):
-                                $is_pending_cancel = (intval($p['pay_status']) === 4);
+                                $p_st = intval($p['pay_status']);
+                                $is_cancelled = ($p_st === 3);
+                                $is_pending_cancel = ($p_st === 4);
+                                $row_bg = $is_cancelled ? 'style="background-color:#fef2f2;"' : ($is_pending_cancel ? 'style="background-color:#fffbeb;"' : '');
+                                $name_st = $is_cancelled ? 'text-decoration:line-through; color:#991b1b;' : ($is_pending_cancel ? 'text-decoration:line-through; color:#92400e;' : '');
+                                $amt_color = $is_cancelled ? '#dc2626' : ($is_pending_cancel ? '#b45309' : 'var(--primary)');
                             ?>
-                            <tr <?php echo $is_pending_cancel ? 'style="background-color:#fffbeb;"' : ''; ?>>
+                            <tr <?php echo $row_bg; ?>>
                                 <td class="center" style="color:var(--text-muted); font-size:0.8rem;"><?php echo $idx++; ?></td>
                                 <td>
-                                    <div style="font-weight:700; font-size:0.875rem; <?php echo $is_pending_cancel ? 'text-decoration:line-through; color:#92400e;' : ''; ?>"><?php echo htmlspecialchars($p['cus_name']); ?></div>
+                                    <div style="font-weight:700; font-size:0.875rem; <?php echo $name_st; ?>"><?php echo htmlspecialchars($p['cus_name']); ?></div>
                                     <div style="font-size:0.75rem; color:var(--text-muted);"><?php echo htmlspecialchars($p['cus_phone']); ?></div>
                                 </td>
                                 <td class="center"><span class="plate-pill"><?php echo htmlspecialchars($p['car_regis_id']); ?></span></td>
@@ -660,8 +665,11 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                                     <?php echo sprintf('%02d/%02d', $p['pay_day'], $p['pay_month']); ?><br>
                                     <span style="font-size:0.72rem;"><?php echo substr($p['pay_time'],0,5); ?> น.</span>
                                 </td>
-                                <td class="num" style="color:<?php echo $is_pending_cancel ? '#b45309' : 'var(--primary)'; ?>; font-weight:700; font-size:0.95rem;">
-                                    <?php if ($is_pending_cancel): ?>
+                                <td class="num" style="color:<?php echo $amt_color; ?>; font-weight:700; font-size:0.95rem;">
+                                    <?php if ($is_cancelled): ?>
+                                        <span style="text-decoration:line-through;"><?php echo number_format($p['pay_total']); ?></span>
+                                        <div style="font-size:0.7rem; color:#dc2626; font-weight:600;">(ยกเลิกแล้ว)</div>
+                                    <?php elseif ($is_pending_cancel): ?>
                                         <span style="text-decoration:line-through;"><?php echo number_format($p['pay_total']); ?></span>
                                         <div style="font-size:0.7rem; color:#d97706; font-weight:600;">(หักยอดแล้ว)</div>
                                     <?php else: ?>
@@ -680,11 +688,13 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                                     <?php endif; ?>
                                 </td>
                                 <td class="center">
-                                    <?php if ($p['pay_status']==1): ?>
+                                    <?php if ($p_st === 1): ?>
                                         <span class="status-pill status-draft">⏳ รอพิมพ์</span>
-                                    <?php elseif ($p['pay_status']==2): ?>
+                                    <?php elseif ($p_st === 2): ?>
                                         <span class="status-pill status-completed">✅ สำเร็จ</span>
-                                    <?php elseif ($p['pay_status']==4): ?>
+                                    <?php elseif ($p_st === 3): ?>
+                                        <span class="status-pill" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;">🚫 ยกเลิกแล้ว</span>
+                                    <?php elseif ($p_st === 4): ?>
                                         <span class="status-pill" style="background:#fef3c7; color:#b45309; border:1px solid #f59e0b;">⏳ รออนุมัติยกเลิก</span>
                                     <?php endif; ?>
                                 </td>
