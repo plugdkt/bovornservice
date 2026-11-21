@@ -607,6 +607,7 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                     ['🔍', 'ค่าตรวจสภาพ (ตรอ.)', number_format($sum_2),         'บาท',    '#fff7ed', '#ea580c'],
                     ['🏛️', 'ค่าภาษี (รวม)',       number_format($sum_3+$sum_4),  'บาท',    '#fdf4ff', '#9333ea'],
                     ['⚠️', 'ค่าปรับ+ค่าเล่ม',    number_format($sum_5+$sum_6),  'บาท',    '#fefce8', '#ca8a04'],
+                    ['🧾', 'ค่าบริการ',           number_format($sum_7),         'บาท',    '#ecfeff', '#0891b2'],
                     ['🏷️', 'ส่วนลด',              number_format($sum_disc),       'บาท',    '#fff1f2', '#e11d48'],
                     ['💵', 'ยอดเงินสด',          number_format($cash_sum),      'บาท',    '#fef3c7', '#d97706'],
                     ['📱', 'ยอดเงินโอน',          number_format($transfer_sum),  'บาท',    '#e0e7ff', '#4338ca'],
