@@ -702,10 +702,8 @@ $period_label = period_label($filter_type, $day, $day2, $month, $year, $months_t
                                 <td class="center" style="white-space:nowrap;">
                                     <div style="display:inline-flex; gap:0.35rem; align-items:center;">
                                         <button class="btn-inspect" onclick="showDetails(<?php echo $p['id_pay']; ?>)">🔎 รายละเอียด</button>
-                                        <?php if (intval($p['pay_status']) === 1): ?>
+                                        <?php if ($p_st === 1 || $p_st === 2): ?>
                                             <button type="button" class="btn-req-cancel" onclick="openCancelReqModal(<?php echo $p['id_pay']; ?>, '<?php echo htmlspecialchars($p['cus_name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($p['car_regis_id'], ENT_QUOTES); ?>', <?php echo floatval($p['pay_total']); ?>)">🚫 แจ้งยกเลิก</button>
-                                        <?php elseif (intval($p['pay_status']) === 2): ?>
-                                            <button type="button" disabled style="background:#f1f5f9; color:#94a3b8; border:1px solid #cbd5e1; border-radius:6px; padding:0.35rem 0.65rem; font-size:0.78rem; font-weight:600; cursor:not-allowed; white-space:nowrap;" title="พิมพ์ใบเสร็จแล้ว ไม่สามารถแจ้งยกเลิกได้ (กรุณาติดต่อผู้จัดการ)">🔒 พิมพ์แล้ว</button>
                                         <?php endif; ?>
                                     </div>
                                 </td>
